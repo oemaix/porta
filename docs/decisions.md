@@ -47,6 +47,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0037](#d-0037-license) | Decided | Apache License 2.0 |
 | [D-0038](#d-0038-enclosure-and-approvals) | Decided | The stack is the enclosure; no approvals |
 | [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
+| [D-0040](#d-0040-python) | Undecided | The flake's Python is enough until a package is needed |
 
 ## Decided
 
@@ -353,4 +354,12 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Recommendation:** Prototypes may use background `#1C1C1E`, surface `#2C2C2E`, text `#F5F5F7`, accent `#3D7EFF`, confirm `#2F9E62`, and danger `#D64545`. These values are not a brand decision.
 - **Source:** `ui.txt` says color blocks and does not give colors.
 - **Consequence:** No asset pipeline for a theme.
+
+### D-0040 Python
+
+- **Status:** Undecided
+- **Options:** The flake's `python3` only. `uv` plus a gitignored `.venv` as soon as the shell exists. `pip` into that environment.
+- **Recommendation:** The flake is enough today. The hook and the shell scripts use the standard library and nothing from PyPI. Add `uv` to `flake.nix`, and create a gitignored `.venv` with it, on the day a third-party package is imported. Do not use `pip`. Keep that environment separate from the Python tree ESP-IDF will install for `idf.py`.
+- **Source:** Project question, 2026-10-28.
+- **Consequence:** No `.venv`, no `uv`, and no `requirements.txt` until this id closes. Postern's shell matches this one. [P-0029](pitfalls.md#p-0029-pip).
 

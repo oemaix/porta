@@ -14,7 +14,7 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, and `esptool` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner.
+The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, and `esptool` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python3` and the standard library. There is no `.venv` yet ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)).
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
 

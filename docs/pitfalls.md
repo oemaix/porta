@@ -176,6 +176,12 @@ Agents read this file before design or implementation work, and they add to it w
 - **Why:** The first pin was a local sibling. Cloning it uses the file transport, which this Git allows only when the command sets `protocol.file.allow=always`.
 - **Resolution:** The remote `https://github.com/oemaix/postern.git` exists. The submodule tracks branch `main` there ([D-0039](decisions.md#d-0039-firmware-repos)).
 
+### P-0029 pip
+
+- **Status:** Open
+- **Avoid:** Do not `pip install` into the devshell, a user site, or a project `.venv`.
+- **Why:** The interpreter is the flake's `python3` until [D-0040](decisions.md#d-0040-python) closes. A virtualenv with no packages is a second interpreter. ESP-IDF will bring its own Python later, and that tree stays separate.
+
 ## Resolved
 
 [P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. The text stays above so the ids are not reused.
