@@ -30,7 +30,7 @@ Reopen the folder in the devcontainer. `postCreateCommand` evaluates `nix develo
 
 ## Terminal
 
-`.vscode/nix-develop-terminal.sh` changes to the repository root and runs `nix develop -c zsh` when the host has zsh, otherwise `nix develop -c bash` ([D-0019](decisions.md#d-0019-terminal-shell)). `.vscode/settings.json` selects that profile as the default on Linux and macOS.
+`.vscode/nix-develop-terminal.sh` changes to the repository root and runs `nix develop -c zsh` when the host has zsh, otherwise `nix develop -c bash` ([D-0019](decisions.md#d-0019-terminal-shell)). `.vscode/settings.json` selects that profile, **Nix Develop**, as the default on Linux and macOS. The profile **Postern** runs `.vscode/nix-develop-postern-terminal.sh`, which opens the submodule's devshell.
 
 ## Required extensions
 
@@ -50,18 +50,20 @@ The Espressif VS Code extension is not required. It installs a second ESP-IDF, a
 
 ## Agent shell hook
 
-`.cursor/` is gitignored ([D-0017](decisions.md#d-0017-gitignore)). Cursor users on a fresh clone do not get the hook until it is copied back. The copy to install is the script `nix-develop.py` from the `bootstrap` skill, at `.cursor/hooks/nix-develop.py`, plus `.cursor/hooks.json`.
+`.cursor/` is gitignored ([D-0017](decisions.md#d-0017-gitignore)). Cursor users on a fresh clone do not get the hook until it is copied back. The copy to install is `.cursor/hooks/nix-develop.py` and `.cursor/hooks/nix-develop-postern.py`, plus `.cursor/hooks.json`. The Porta script started from `nix-develop.py` in the `bootstrap` skill. The Postern script is local to this checkout.
 
-The hook is a `preToolUse` filter on the Shell tool. It rewrites a command so that it runs in `nix develop` unless `IN_NIX_SHELL` is already set or the command is already `nix develop` ([D-0018](decisions.md#d-0018-agent-shell), [P-0014](pitfalls.md#p-0014-hook-reentry)). `beforeShellExecution` cannot change the command, so the hook is not attached there.
+The hooks are `preToolUse` filters on the Shell tool. `.cursor/hooks/nix-develop-postern.py` rewrites a command when its working directory is inside `postern/`, and runs it in that flake. `.cursor/hooks/nix-develop.py` does the same selection for every command. A command is left unchanged when `IN_NIX_SHELL` is already set or it already contains `nix develop -c` ([D-0018](decisions.md#d-0018-agent-shell), [P-0014](pitfalls.md#p-0014-hook-reentry)). `beforeShellExecution` cannot change the command, so the hooks are not attached there.
 
 Restore check:
 
 ```sh
 printf '%s' '{"tool_name":"Shell","tool_input":{"command":"echo hi","working_directory":"."}}' \
   | .cursor/hooks/nix-develop.py
+printf '%s' '{"tool_name":"Shell","tool_input":{"command":"echo hi","working_directory":"postern"}}' \
+  | .cursor/hooks/nix-develop-postern.py
 ```
 
-The printed command contains `IN_NIX_SHELL` and `nix develop -c`. A command that already starts with `nix develop` is left unchanged.
+The first printed command contains `IN_NIX_SHELL` and `nix develop -c`. The second names the `postern` flake. A command that already contains `nix develop -c` is left unchanged. The Postern script leaves a Porta working directory unchanged.
 
 ## Cursor rules
 

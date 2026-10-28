@@ -25,8 +25,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0015](#d-0015-nixpkgs) | Decided | nixpkgs `nixos-26.05` |
 | [D-0016](#d-0016-documentation-language) | Decided | English |
 | [D-0017](#d-0017-gitignore) | Decided | Ignore `tmp/` and `.cursor/`; track `.vscode/` |
-| [D-0018](#d-0018-agent-shell) | Decided | Agent shell commands enter `nix develop` |
-| [D-0019](#d-0019-terminal-shell) | Decided | Terminal prefers zsh, then bash |
+| [D-0018](#d-0018-agent-shell) | Decided | Agent shell enters Porta, or Postern inside that submodule |
+| [D-0019](#d-0019-terminal-shell) | Decided | Default terminal is Porta; Postern is a second profile |
 | [D-0020](#d-0020-pitfall-record) | Decided | Pitfalls live in `docs/pitfalls.md` |
 | [D-0021](#d-0021-no-firmware-tree) | Decided | No application tree in phase 0 |
 | [D-0022](#d-0022-development-host) | Decided | Linux is the development host |
@@ -172,16 +172,16 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0018 Agent shell
 
 - **Status:** Decided
-- **Choice:** Every agent Shell command runs inside `nix develop`, using zsh if that binary is visible to the hook, otherwise bash. If `IN_NIX_SHELL` is already set, the command is not wrapped again.
-- **Source:** Bootstrap request.
-- **Consequence:** The hook is `preToolUse` on Shell. Tools the agent needs are packages in the devshell.
+- **Choice:** Every agent Shell command runs inside `nix develop`, using zsh if that binary is visible to the hook, otherwise bash. A command whose working directory is inside `postern/` uses that submodule's flake. If `IN_NIX_SHELL` is already set, or the command already starts with `nix develop`, it is not wrapped again.
+- **Source:** Bootstrap request. The Postern hook was added when that submodule became a place to build.
+- **Consequence:** Two `preToolUse` entries share the Shell tool. `.cursor/hooks/nix-develop-postern.py` rewrites only `postern/` commands. `.cursor/hooks/nix-develop.py` selects the same flake, so either entry is enough and they do not nest ([P-0014](pitfalls.md#p-0014-hook-reentry)). Tools the agent needs are packages in the devshell it enters.
 
 ### D-0019 Terminal shell
 
 - **Status:** Decided
-- **Choice:** The default integrated terminal runs `.vscode/nix-develop-terminal.sh`, which enters `nix develop` with zsh when the host has zsh, otherwise bash.
-- **Source:** Bootstrap request.
-- **Consequence:** Both shells are packages in the devshell so `nix develop -c` can find the one the script selects.
+- **Choice:** The default integrated terminal runs `.vscode/nix-develop-terminal.sh`, which enters this repo's `nix develop` with zsh when the host has zsh, otherwise bash. The profile **Postern** runs `.vscode/nix-develop-postern-terminal.sh` and enters the submodule's devshell.
+- **Source:** Bootstrap request. The Postern profile was added with the submodule hook.
+- **Consequence:** Both shells are packages in each devshell so `nix develop -c` can find the one the script selects. The default profile stays this repo.
 
 ### D-0020 Pitfall record
 

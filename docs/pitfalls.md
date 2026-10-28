@@ -90,7 +90,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not wrap a command that already starts with `nix develop`, and do not enter a second devshell when `IN_NIX_SHELL` is set.
-- **Why:** The agent hook runs on every Shell command ([D-0018](decisions.md#d-0018-agent-shell)). A second entry is slow and can hide the real command. The guard lives in `.cursor/hooks/nix-develop.py`.
+- **Why:** The agent hooks run on every Shell command ([D-0018](decisions.md#d-0018-agent-shell)). Nesting two devshells hides the command. `.cursor/hooks/nix-develop-postern.py` rewrites a command only when its working directory is inside `postern/`. `.cursor/hooks/nix-develop.py` selects that same flake. Both leave a command alone when it already contains `nix develop -c` or `IN_NIX_SHELL` is set.
 
 ### P-0015 Cursor files are local
 
