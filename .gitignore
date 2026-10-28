@@ -1,0 +1,10 @@
+# Design scratch. The specification that other people read lives in docs/.
+/tmp/
+
+# Cursor agent state. People who do not use Cursor can ignore this tree.
+/.cursor/
+
+# Nix
+/result
+/result-*
+.direnv/
