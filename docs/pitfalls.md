@@ -24,7 +24,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat AAC as the first Bluetooth codec to bring up on the Stamp Pico.
-- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. Measure AAC after SBC is stable. If it does not fit, record the numbers here and supersede the codec goal with a new decision.
+- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. The 2026-10-28 check of the codec path is [P-0024](#p-0024-aac-source). Measure free heap on this board after SBC is stable. If AAC does not fit, record the numbers here and supersede the codec goal with a new decision.
 
 ### P-0004 Stack mechanics
 
@@ -149,7 +149,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat an AAC encoder, or an AAC A2DP sink, as proof that the Stamp Pico can open an AAC A2DP source session.
-- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). Espressif's A2DP API can register an AAC source endpoint, and an Espressif note from May 2026 said the source side did not negotiate AAC yet while the sink side did. SBC is the session that has to pass. Re-check the IDF version when the Stamp Pico firmware starts, and record the result here.
+- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). Checked 2026-10-28: ESP-IDF 6.1 documents `a2dp_source_aac` for the ESP32 target. The application encodes MPEG-2 AAC LC with `esp_audio_codec` and registers that stream endpoint beside a mandatory SBC endpoint. The example does not ask for PSRAM. Espressif's codec table lists about 51 KB of heap for 48 kHz stereo AAC-LC, and about 40 KB of stack to run the encoder set. The Stamp Pico runs Classic Bluetooth and not Wi-Fi, so that heap is internal RAM. A minimal ESP32 image leaves on the order of 290 KB of data RAM; Classic Bluetooth is on the order of 70 KB for the controller in dual mode, and one measured Bluedroid enable took about 120 KB. Releasing the unused BLE controller is part of Espressif's own A2DP source example. Those figures leave room for 51 KB, the frame buffers, and the encoder stack. This tree has not measured the free heap after Bluedroid is up. A linked encoder is not a passed source session on this module. SBC is still the session that has to pass. Record the heap numbers here when Postern is first flashed.
 
 ### P-0025 Grove 5 V
 
@@ -181,6 +181,12 @@ Agents read this file before design or implementation work, and they add to it w
 - **Status:** Open
 - **Avoid:** Do not `pip install` into the devshell, a user site, or a project `.venv`.
 - **Why:** The interpreter is the flake's `python3` until [D-0040](decisions.md#d-0040-python) closes. A virtualenv with no packages is a second interpreter. ESP-IDF will bring its own Python later, and that tree stays separate.
+
+### P-0030 No Classic Bluetooth
+
+- **Status:** Open
+- **Avoid:** Do not replace the Stamp Pico with an ESP32-S3, C2, C3, C5, C6, C61, H2, or S2 module.
+- **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit.
 
 ## Resolved
 

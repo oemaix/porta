@@ -4,7 +4,7 @@ Status: baseline · 2026-10-28
 
 ## Current status
 
-**Phase 0 is the current phase.** The specification and the Nix skeleton are in the working tree. No firmware has been written. Phase 1 has not started.
+**Phase 0 is the current phase for the Core2.** The specification and the Nix skeleton are in the working tree. The Core2 application is not written. Postern's phase-1 path is in the submodule and has not been run on a board.
 
 | Phase | State | Exit |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Status: baseline · 2026-10-28
 
 From the design notes, kept as two prototypes ([D-0023](decisions.md#d-0023-separate-phase-1-prototypes)):
 
-- M5Stamp Pico audio bridge: the Postern component, I2S in, Bluetooth out, AAC with an SBC fallback ([D-0039](decisions.md#d-0039-firmware-repos)). The component skeleton is pinned. The audio path is not started.
+- M5Stamp Pico audio bridge: the Postern component, I2S in, Bluetooth out, AAC with an SBC fallback ([D-0039](decisions.md#d-0039-firmware-repos)). The phase-1 path in that component is I2S slave, the I2C register driver, and A2DP SBC. AAC is not in that code. It has not been run on a board.
 - Spotify Connect player on Core2 v1.3: the Core2 fetches the track and plays it to I2S ([D-0029](decisions.md#d-0029-spotify-transport)).
 - A simple UI that is complete enough to use, built on an API that can carry later screens.
 - Module HMI working for focus, confirm, and back.
