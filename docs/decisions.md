@@ -248,15 +248,15 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 
   | Signal | Core2 GPIO | Reachable on | Stamp Pico |
   | --- | --- | --- | --- |
-  | I2C SDA | GPIO32 | PORT.A yellow, M-Bus pin 19 | SDA |
-  | I2C SCL | GPIO33 | PORT.A white, M-Bus pin 20 | SCL |
-  | I2S BCLK | GPIO14 | PORT.C yellow, M-Bus pin 16 | BCLK in |
-  | I2S LRCK | GPIO13 | PORT.C white, M-Bus pin 15 | WS in |
-  | I2S DOUT | GPIO26 | PORT.B yellow, M-Bus pin 10 | DIN |
+  | I2C SDA | GPIO32 | PORT.A yellow, M-Bus pin 19 | GPIO21 |
+  | I2C SCL | GPIO33 | PORT.A white, M-Bus pin 20 | GPIO22 |
+  | I2S BCLK | GPIO14 | PORT.C yellow, M-Bus pin 16 | GPIO18 |
+  | I2S LRCK | GPIO13 | PORT.C white, M-Bus pin 15 | GPIO19 |
+  | I2S DOUT | GPIO26 | PORT.B yellow, M-Bus pin 10 | GPIO36 DIN |
   | GND | — | Grove black | GND |
 
 - **Source:** The link type is a project decision, 2026-10-28. The pins are taken from the [Core2 v1.3 pin map](https://docs.m5stack.com/en/core/Core2_v1.3) and from the Grove colors on ExtPort For Core2. Module HMI brings PORT.B and PORT.C out of the stack. PORT.A passes through on M-Bus pins 19 and 20.
-- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is not fixed yet. Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md).
+- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. Core2 GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Stamp Pico GPIO36 is a different pin and is the cable's data input. Stamp Pico GPIO26 stays free for a later return path and is not wired. Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is `0x1D` (Postern [D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md). The Stamp Pico side is Postern [D-0017](../postern/docs/decisions.md#d-0017-reference-pins).
 
 ### D-0032 I2S format
 
