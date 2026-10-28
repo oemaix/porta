@@ -24,13 +24,20 @@ The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository
 
 ## Devcontainer
 
-The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS, creates a `vscode` user, and installs official single-user Nix with flakes enabled. The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)).
+The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)).
 
-Reopen the folder in the devcontainer. `postCreateCommand` evaluates `nix develop --command true` once, which fills the Nix store. After that, the terminal profile below is the shell people use.
+Reopen in Container asks which config to use ([D-0041](decisions.md#d-0041-devcontainer-host)).
+
+| Config | Who |
+| --- | --- |
+| **Porta (Nix on Ubuntu)** | A host without NixOS. The Nix store stays in the image. |
+| **Porta (NixOS host store)** | A NixOS host. The container bind-mounts that host's `/nix` read-only and uses its daemon, so store paths survive a rebuild ([P-0033](pitfalls.md#p-0033-host-nix-store)). |
+
+`postCreateCommand` runs `.devcontainer/post-create.sh`, which waits for the uid change, keeps `NIX_CONFIG` if it must re-exec as `vscode`, and then evaluates `nix develop --command true` once. That fills whichever store the config selected. After that, the terminal profile below is the shell people use. A rebuild is required after an entrypoint or mount change. The entrypoint and the Nix client are copied into the image.
 
 ## Terminal
 
-`.vscode/nix-develop-terminal.sh` changes to the repository root and runs `nix develop -c zsh` when the host has zsh, otherwise `nix develop -c bash` ([D-0019](decisions.md#d-0019-terminal-shell)). `.vscode/settings.json` selects that profile, **Nix Develop**, as the default on Linux and macOS. The profile **Postern** runs `.vscode/nix-develop-postern-terminal.sh`, which opens the submodule's devshell.
+`.vscode/settings.json` defines the profile **Nix Develop** as `nix develop` for this repo with `--command zsh`, and selects it as the default on Linux and macOS ([D-0019](decisions.md#d-0019-terminal-shell)). The profile **Postern** is the same command for the Postern flake. zsh is a devshell package. The image does not install it. The prompt is the working directory, then `#` as root and `%` otherwise ([P-0034](pitfalls.md#p-0034-zsh-exit-status)). Those profiles are the terminal menu on the host and in the container. The image puts `/usr/local/bin` first on `PATH`, so `nix` there is the client copied into the image. The two `devcontainer.json` files do not repeat the profiles. Open them from the terminal profile menu. They are not top-level commands. The extension list in both configs is the same list as `.vscode/extensions.json`.
 
 ## Required extensions
 

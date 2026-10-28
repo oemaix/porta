@@ -48,6 +48,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0038](#d-0038-enclosure-and-approvals) | Decided | The stack is the enclosure; no approvals |
 | [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
 | [D-0040](#d-0040-python) | Undecided | The flake's Python is enough until a package is needed |
+| [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
 
 ## Decided
 
@@ -145,9 +146,9 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0014 Devcontainer base
 
 - **Status:** Decided
-- **Choice:** The container image is Ubuntu 26.04 LTS. Nix is installed with the official single-user installer (`--no-daemon`), flakes enabled, for the `vscode` user.
+- **Choice:** The container image is Ubuntu 26.04 LTS. Nix 2.35.4 is installed with the official single-user installer (`--no-daemon`) from `releases.nixos.org`, flakes enabled, for the `vscode` user.
 - **Source:** Reasonable completion. "Ubuntu LTS" at the time of bootstrap is 26.04, not the interim 26.10. Single-user Nix matches a one-user container.
-- **Consequence:** Host Nix settings are not copied into the image. The container sandbox exception is [P-0019](pitfalls.md#p-0019-container-sandbox).
+- **Consequence:** Host Nix settings are not copied into the image. The installer URL is pinned ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). The container sandbox exception is [P-0019](pitfalls.md#p-0019-container-sandbox). The image account starts at uid 1000 ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). `.devcontainer/entrypoint.sh` then moves it onto the workspace owner seen inside the container. `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). The mount path comes from `DEVCONTAINER_WORKSPACE`, not from a fixed directory name ([P-0037](pitfalls.md#p-0037-checkout-directory-name)). Reopen in Container offers two configs ([D-0041](#d-0041-devcontainer-host)). Only the NixOS config bind-mounts the host `/nix` read-only. Both enable `nix-command` and `flakes` through one line of `NIX_CONFIG`. `/etc/nix/nix.conf` also sets `accept-flake-config = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)).
 
 ### D-0015 Nixpkgs
 
@@ -173,16 +174,16 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0018 Agent shell
 
 - **Status:** Decided
-- **Choice:** Every agent Shell command runs inside `nix develop`, using zsh if that binary is visible to the hook, otherwise bash. A command whose working directory is inside `postern/` uses that submodule's flake. If `IN_NIX_SHELL` is already set, or the command already starts with `nix develop`, it is not wrapped again.
+- **Choice:** Every agent Shell command runs inside `nix develop`, using the devshell's zsh. A command whose working directory is inside `postern/` uses that submodule's flake. If `IN_NIX_SHELL` is already set, or the command already starts with `nix develop`, it is not wrapped again.
 - **Source:** Bootstrap request. The Postern hook was added when that submodule became a place to build.
 - **Consequence:** Two `preToolUse` entries share the Shell tool. `.cursor/hooks/nix-develop-postern.py` rewrites only `postern/` commands. `.cursor/hooks/nix-develop.py` selects the same flake, so either entry is enough and they do not nest ([P-0014](pitfalls.md#p-0014-hook-reentry)). Tools the agent needs are packages in the devshell it enters.
 
 ### D-0019 Terminal shell
 
 - **Status:** Decided
-- **Choice:** The default integrated terminal runs `.vscode/nix-develop-terminal.sh`, which enters this repo's `nix develop` with zsh when the host has zsh, otherwise bash. The profile **Postern** runs `.vscode/nix-develop-postern-terminal.sh` and enters the submodule's devshell.
+- **Choice:** The default integrated terminal profile **Nix Develop** runs `nix develop` for this repo with `--command zsh`. The profile **Postern** runs `nix develop` for the Postern flake the same way. The devcontainer image does not install zsh.
 - **Source:** Bootstrap request. The Postern profile was added with the submodule hook.
-- **Consequence:** Both shells are packages in each devshell so `nix develop -c` can find the one the script selects. The default profile stays this repo.
+- **Consequence:** zsh is a package in each devshell, so the profile does not look for a zsh outside `nix develop`. `.vscode/settings.json` defines both profiles for Linux and macOS and selects **Nix Develop** as the default. The devcontainer image puts `/usr/local/bin` first on `PATH`, so `nix` in that file is the client copied into the image. The two `devcontainer.json` files do not repeat the profiles. The devshell sets `ZDOTDIR` so the prompt shows the working directory and `exit` returns 0 ([P-0034](pitfalls.md#p-0034-zsh-exit-status)).
 
 ### D-0020 Pitfall record
 
@@ -362,4 +363,11 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Recommendation:** The flake is enough today. The hook and the shell scripts use the standard library and nothing from PyPI. Add `uv` to `flake.nix`, and create a gitignored `.venv` with it, on the day a third-party package is imported. Do not use `pip`. Keep that environment separate from the Python tree ESP-IDF will install for `idf.py`.
 - **Source:** Project question, 2026-10-28.
 - **Consequence:** No `.venv`, no `uv`, and no `requirements.txt` until this id closes. Postern's shell matches this one. [P-0029](pitfalls.md#p-0029-pip).
+
+### D-0041 Devcontainer host
+
+- **Status:** Decided
+- **Choice:** Reopen in Container offers two configs that share `.devcontainer/Dockerfile`. **Porta (Nix on Ubuntu)** is `.devcontainer/devcontainer.json` and uses the single-user Nix installed in the image. **Porta (NixOS host store)** is `.devcontainer/nixos-host/devcontainer.json`. It bind-mounts the host `/nix` read-only and talks to the host daemon.
+- **Source:** The host-store mount does not start on a machine with no `/nix`. The two-config layout is the selectable pair from another project's devcontainer, without its GPU config or its multi-user Nix feature.
+- **Consequence:** [D-0014](#d-0014-devcontainer-base) still builds one Ubuntu 26.04 image. The host-store rules are [P-0033](pitfalls.md#p-0033-host-nix-store). The Ubuntu config must not mount `/nix` ([P-0035](pitfalls.md#p-0035-one-devcontainer-for-every-host)). A NixOS host picks the host-store entry.
 

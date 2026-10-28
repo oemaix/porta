@@ -188,6 +188,48 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not replace the Stamp Pico with an ESP32-S3, C2, C3, C5, C6, C61, H2, or S2 module.
 - **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit.
 
+### P-0031 Ubuntu uid 1000
+
+- **Status:** Open
+- **Avoid:** Do not create the `vscode` user with `groupadd` or `useradd` at uid 1000.
+- **Why:** `ubuntu:26.04` already has user and group `ubuntu` at 1000:1000. `groupadd --gid 1000` exits 4, and the devcontainer image build stops before Nix is installed. `.devcontainer/Dockerfile` renames that account to `vscode` and keeps its groups, including `dialout`.
+
+### P-0032 Container uid
+
+- **Status:** Open
+- **Avoid:** Do not set `safe.directory` so `nix develop` will open this checkout. Do not turn `updateRemoteUserUID` on. Do not leave the running `vscode` user at the image uid when the workspace owner inside the container is different.
+- **Why:** Rootless Docker maps the host user to container uid 0. The numeric host uid 1000 is a subordinate id inside the container. `updateRemoteUserUID` copies that host number into the image, so `vscode` does not own the workspace, and `postCreateCommand` stops with libgit2 error 7. Files written as that uid show up on the host as an unknown user. `.devcontainer/entrypoint.sh` reads the owner inside the container and moves `vscode` onto it. When that owner is uid 0, `vscode` shares the uid with `root`. `getpwuid(0)` returns `root`, and the session home is `/root`. Do not put the Nix feature flags only in a home `nix.conf`; that file is not what this session reads ([P-0033](#p-0033-host-nix-store)). A `safe.directory` line in `~/.gitconfig` is lost on rebuild and does not fix the written uid.
+
+### P-0033 Host Nix store
+
+- **Status:** Open
+- **Avoid:** Do not `chown` `/nix` when it is a bind mount of the host store. Do not mount the host store read-write. Do not turn on `nix-command` or `flakes` by writing `nix.conf` only into the container home or into `/root`. Do not put a newline in `NIX_CONFIG`. Do not take the first profile under `/nix/var/nix/profiles/per-user/`. Do not leave `accept-flake-config` on.
+- **Why:** A home `nix.conf` is gone on rebuild. After the uid move the session home is `/root`, so `/home/vscode/.config/nix/nix.conf` is not the file Nix reads. `.devcontainer/nixos-host/devcontainer.json` bind-mounts the host `/nix` read-only and sets `NIX_CONFIG` to one line, `experimental-features = nix-command flakes`. A newline in `containerEnv` arrives as the two characters `\` and `n`, Nix leaves flakes disabled, and `.devcontainer/nix.sh` rewrites that sequence. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` for every home. `accept-flake-config = false` stops a flake from adding substituters. `.devcontainer/nix.sh` uses the host daemon when its socket is present, so this container does not write store paths itself. It selects the system profile, then the default profile, then the current user's profile. `.devcontainer/post-create.sh` preserves `NIX_CONFIG` across its sudo re-exec. The entrypoint leaves a mounted `/nix` alone.
+
+### P-0034 Zsh exit status
+
+- **Status:** Open
+- **Avoid:** Do not start the interactive devshell zsh with no startup file.
+- **Why:** Nix's zsh loads `zsh/newuser` when `.zshrc` is missing. As uid 0 that installer returns 1, so a following `exit` closes the terminal with status 1. The default prompt is `%m%#`, the container hostname and `#`. Each devshell sets `ZDOTDIR` to `shell/`, whose `.zshrc` shows the working directory and ends successfully.
+
+### P-0035 One devcontainer for every host
+
+- **Status:** Open
+- **Avoid:** Do not bind-mount the host `/nix` from **Porta (Nix on Ubuntu)**. Do not send a host that has no `/nix` through **Porta (NixOS host store)**.
+- **Why:** The mount hides the Nix store installed in the image. On a host with no `/nix`, Docker creates an empty directory and the image `nix` is gone. The Ubuntu config is `.devcontainer/devcontainer.json`. The NixOS config is `.devcontainer/nixos-host/devcontainer.json` ([D-0041](decisions.md#d-0041-devcontainer-host)).
+
+### P-0036 Floating Nix installer
+
+- **Status:** Open
+- **Avoid:** Do not install Nix from `https://nixos.org/nix/install`.
+- **Why:** That URL is the current installer. A later image rebuild can change the Nix version. `.devcontainer/Dockerfile` pins `https://releases.nixos.org/nix/nix-2.35.4/install` ([D-0014](decisions.md#d-0014-devcontainer-base)).
+
+### P-0037 Checkout directory name
+
+- **Status:** Open
+- **Avoid:** Do not hardcode `/workspaces/porta` in the entrypoint or the image `WORKDIR`.
+- **Why:** Dev Containers mounts the checkout at `/workspaces/` plus the directory name. A clone under another name leaves `vscode` on the image uid, and `postCreateCommand` stops with libgit2 error 7 ([P-0032](#p-0032-container-uid)). Both configs set `DEVCONTAINER_WORKSPACE` to `${containerWorkspaceFolder}`. The entrypoint reads that variable. The image `WORKDIR` is `/workspaces`.
+
 ## Resolved
 
 [P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. The text stays above so the ids are not reused.
