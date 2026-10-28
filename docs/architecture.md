@@ -51,7 +51,7 @@ Vendor descriptions used for the identification:
 
 **Phase 1 player.** The Core2 is a Spotify Connect speaker ([D-0029](decisions.md#d-0029-spotify-transport)). cspot fetches the track over Wi-Fi, decodes it to PCM, and a Porta I2S sink clocks that PCM into Module Audio. Play, pause, and skip call the same session. The internal NS4168 speaker and SPM1423 microphone are not the product output. They share the codec pins and must be disabled ([P-0006](pitfalls.md#p-0006-internal-i2s)).
 
-**Phase 1 bridge.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. SBC is the first codec that has to pass. AAC is the preferred codec after that measurement ([P-0003](pitfalls.md#p-0003-no-psram)).
+**Phase 1 bridge.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. The Postern component offers AAC-LC and falls back to SBC. SBC is the session that has to pass on the board before AAC is treated as done ([P-0003](pitfalls.md#p-0003-no-psram), [P-0024](pitfalls.md#p-0024-aac-source)).
 
 **Phase 2 line bridge.** The ES8388 ADC captures the TRS jack. Samples reach the Stamp Pico by the link in [D-0031](decisions.md#d-0031-board-link).
 
