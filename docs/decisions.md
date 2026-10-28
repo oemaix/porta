@@ -297,10 +297,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0039 Firmware repos
 
 - **Status:** Decided
-- **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is the local path `../postern`, with no network remote. Another project builds that component into its own application and flashes that image.
+- **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is `https://github.com/oemaix/postern.git`, branch `main`. Another project builds that component into its own application and flashes that image.
 - **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C carries rate, start and stop, and link status. The address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2. A2DP, SBC, and AAC stay in Postern.
-- **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name and the local submodule followed the same day.
-- **Consequence:** Phase 0 still has no Core2 `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). A shared-components repository waits until the cable header outgrows Postern. Adding a network remote updates this id's URL.
+- **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
+- **Consequence:** Phase 0 still has no Core2 `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
 
 ## Undecided
 

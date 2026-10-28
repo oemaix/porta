@@ -20,7 +20,7 @@ The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository
 
 ## Postern
 
-`postern/` is a submodule. Its URL is the sibling path `../postern`, and that repository has no network remote ([D-0039](decisions.md#d-0039-firmware-repos)). This Git refuses that file transport unless the command sets `protocol.file.allow=always`. That override stays on the command. It is not written into git config ([P-0028](pitfalls.md#p-0028-postern-file-url)).
+`postern/` is a submodule of `https://github.com/oemaix/postern.git`, branch `main` ([D-0039](decisions.md#d-0039-firmware-repos)).
 
 ## Devcontainer
 

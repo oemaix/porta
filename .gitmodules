@@ -1,3 +1,4 @@
 [submodule "postern"]
 	path = postern
-	url = ../postern
+	url = https://github.com/oemaix/postern.git
+	branch = main

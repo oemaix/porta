@@ -171,10 +171,11 @@ Agents read this file before design or implementation work, and they add to it w
 
 ### P-0028 Postern file URL
 
-- **Status:** Open
+- **Status:** Resolved
 - **Avoid:** Do not give the Postern submodule a network URL until a remote exists, and do not replace `../postern` with an absolute path.
-- **Why:** [D-0039](decisions.md#d-0039-firmware-repos) pins a local sibling. Cloning it uses the file transport, which this Git allows only when the command sets `protocol.file.allow=always`. Leave that off git config.
+- **Why:** The first pin was a local sibling. Cloning it uses the file transport, which this Git allows only when the command sets `protocol.file.allow=always`.
+- **Resolution:** The remote `https://github.com/oemaix/postern.git` exists. The submodule tracks branch `main` there ([D-0039](decisions.md#d-0039-firmware-repos)).
 
 ## Resolved
 
-[P-0020](#p-0020-no-toolchain-yet) is resolved. The text stays above so the id is not reused.
+[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. The text stays above so the ids are not reused.
