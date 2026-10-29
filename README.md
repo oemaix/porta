@@ -15,6 +15,7 @@ Porta is a portable audio appliance built on M5Stack Core2 v1.3. It plays a Spot
 | [Requirements](docs/requirements.md) | Functional and non-functional requirements |
 | [UI design](docs/ui-design.md) | Inputs, screens, visual rules |
 | [Architecture](docs/architecture.md) | Boards, audio paths, buses |
+| [Software](docs/software.md) | Core2 components and how they meet |
 | [Operations](docs/operations.md) | Devshell, container, editor, agent hook |
 | [Roadmap](docs/roadmap.md) | Phases and current status |
 | [Decisions](docs/decisions.md) | Decided and undecided items (`D-xxxx`) |

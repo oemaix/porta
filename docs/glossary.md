@@ -1,6 +1,6 @@
 # Glossary
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 | Term | Meaning |
 | --- | --- |
@@ -18,6 +18,8 @@ Status: baseline · 2026-10-28
 | DLNA renderer | A player that fetches a URI a controller sets. Codecs are LPCM, WAV PCM, and ALAC ([D-0036](decisions.md#d-0036-airplay-and-dlna)). |
 | Spotify Connect | The session in which the Core2 fetches and plays a track while a phone only chooses the music ([D-0029](decisions.md#d-0029-spotify-transport)). |
 | cspot | The C++ library that implements that session on the Core2. Use the philippe44 fork, not the last upstream snapshot ([P-0026](pitfalls.md#p-0026-cspot-fork)). |
+| Player command | play, pause, next, previous, or set volume. Sent by `ui` to `player` ([D-0042](decisions.md#d-0042-core2-components)). |
+| Status snapshot | Fixed-size record `ui` reads: title, transport, volume, session ready, and Wi-Fi. PCM is not in it. |
 | Postern | The ESP-IDF component that sends I2S audio to Bluetooth. It is the `postern` submodule ([D-0039](decisions.md#d-0039-firmware-repos)). |
 | A2DP | Bluetooth profile used to send audio to headphones. |
 | AAC / SBC | Codecs for that Bluetooth link. AAC is the goal. SBC is the fallback that must work first ([D-0007](decisions.md#d-0007-bluetooth-transmitter)). |

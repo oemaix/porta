@@ -1,6 +1,6 @@
 # Architecture
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 Porta is two controllers. The Core2 v1.3 owns the UI, Wi-Fi, and the analog codec. The M5Stamp Pico owns Bluetooth transmission. They are not on the same module stack. The Stamp Pico sits on a Module Proto and is cabled to the Core2. The cable is [D-0031](decisions.md#d-0031-board-link).
 
@@ -84,7 +84,7 @@ Module Audio's configuration A is the Core2 setting. Its bus drawing places I2S 
 
 Module HMI and Module Audio sit on the Core2 I2C bus. Known addresses: HMI `0x41`, audio MCU `0x33`, ES8388 `0x10`, AXP192 `0x34`, FT6336U `0x38`, BM8563 `0x51`. Re-scan the assembled stack before adding a device ([P-0007](pitfalls.md#p-0007-i2c-map)).
 
-The UI architecture is the action API in [ui design](ui-design.md). Both firmwares are ESP-IDF ([D-0028](decisions.md#d-0028-firmware-framework)). There is still no application tree ([D-0021](decisions.md#d-0021-no-firmware-tree)).
+The UI architecture is the action API in [ui design](ui-design.md). How that API sits among the Core2 components is [software](software.md).
 
 ## Power
 
@@ -92,4 +92,4 @@ Stacking modules requires the Core2 battery bottom to come off. M5 documents tha
 
 ## Software boundary
 
-There is no Core2 firmware tree ([D-0021](decisions.md#d-0021-no-firmware-tree)). The Core2 application will live in this repo. The Stamp Pico bridge is the Postern submodule, an ESP-IDF component whose pins are compile-time Kconfig on that chip ([D-0039](decisions.md#d-0039-firmware-repos)). The development shell has host tools, including `esptool`, and does not yet have `idf.py`. See [operations](operations.md).
+The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework)). Its components are [software](software.md) ([D-0042](decisions.md#d-0042-core2-components)). There is still no firmware tree ([D-0021](decisions.md#d-0021-no-firmware-tree)). The Stamp Pico bridge is the Postern submodule, an ESP-IDF component whose pins are compile-time Kconfig on that chip ([D-0039](decisions.md#d-0039-firmware-repos)). The development shell has host tools, including `esptool`, and does not yet have `idf.py`. See [operations](operations.md).

@@ -1,6 +1,6 @@
 # Vision and scope
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 ## Vision
 
@@ -13,6 +13,7 @@ The Blackberry 7290 and 8100 are the reference for the wheel grammar only. They 
 - The three jobs in [D-0002](decisions.md#d-0002-product-functions), delivered in the phases in [D-0012](decisions.md#d-0012-phase-split).
 - The named M5Stack hardware, as identified in [D-0003](decisions.md#d-0003-host-board) through [D-0007](decisions.md#d-0007-bluetooth-transmitter).
 - A UI API that is larger than the first screens, so later screens do not invent a second interaction model ([D-0010](decisions.md#d-0010-interaction-model)).
+- One Core2 image whose panel and player meet at commands and a status snapshot, so later sources keep that seam ([D-0042](decisions.md#d-0042-core2-components)).
 - A Nix development shell, and an optional Ubuntu LTS devcontainer, as the way people build ([D-0013](decisions.md#d-0013-build-entry)).
 
 ## Out of scope

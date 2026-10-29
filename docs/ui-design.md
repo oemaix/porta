@@ -1,6 +1,6 @@
 # UI design
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 The panel is the Core2 v1.3 screen, 320×240, capacitive touch, plus three virtual buttons along the bottom edge. The Module HMI adds a wheel, the wheel press, and two side buttons. Those inputs share one action set ([D-0010](decisions.md#d-0010-interaction-model)).
 
@@ -34,7 +34,7 @@ The phase 1 set is small and must be finishable with the wheel alone ([FR-05](re
 | Connect | Wi-Fi state, and the phase 1 login step once [D-0030](decisions.md#d-0030-login) exists |
 | Settings | Entries that exist in phase 1 only. Battery is absent until phase 2 |
 
-The screen module owns the stack. Adapters for the encoder, the buttons, and touch translate hardware into the four actions. Widgets do not read I2C themselves.
+`ui` owns the stack. `input` translates the encoder, the buttons, and touch into the four actions. Widgets do not read I2C. A player command leaves `ui` only when the focused block is a playback control ([software](software.md)).
 
 ## Phase 2
 

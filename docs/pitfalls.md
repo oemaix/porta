@@ -1,6 +1,6 @@
 # Pitfalls
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 Open entries are binding. Do not delete an entry. Mark it resolved, with the reason, when it stops applying. New entries take the next id and are added in the same change that discovered them.
 
@@ -229,6 +229,12 @@ Agents read this file before design or implementation work, and they add to it w
 - **Status:** Open
 - **Avoid:** Do not hardcode `/workspaces/porta` in the entrypoint or the image `WORKDIR`.
 - **Why:** Dev Containers mounts the checkout at `/workspaces/` plus the directory name. A clone under another name leaves `vscode` on the image uid, and `postCreateCommand` stops with libgit2 error 7 ([P-0032](#p-0032-container-uid)). Both configs set `DEVCONTAINER_WORKSPACE` to `${containerWorkspaceFolder}`. The entrypoint reads that variable. The image `WORKDIR` is `/workspaces`.
+
+### P-0038 Panel calls the player
+
+- **Status:** Open
+- **Avoid:** Do not call cspot, the ES8388, I2S, or the Wi-Fi driver from `input` or `ui`. Do not put PCM in the status snapshot. Do not add a second process, a socket, or a widget toolkit as the seam between the panel and the player.
+- **Why:** [D-0042](decisions.md#d-0042-core2-components). The Core2 image is one ESP-IDF application. The seam is player commands and one snapshot ([software](software.md)). PCM stays on the path from `player` to `sink`. A toolkit or a second process spends the RAM the session needs and gives the screens another way to reach the codec.
 
 ## Resolved
 

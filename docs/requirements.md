@@ -1,6 +1,6 @@
 # Requirements
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 Phase 1 requirements are the acceptance bar for that phase. Phase 2 requirements are not implemented early ([P-0012](pitfalls.md#p-0012-phase-creep)).
 
@@ -34,6 +34,7 @@ FR-01 is the Connect session on the Core2 ([D-0029](decisions.md#d-0029-spotify-
 | NFR-05 | Cells are not paralleled. Charge and fuel measurement follow [D-0033](decisions.md#d-0033-power-architecture). |
 | NFR-06 | A clean Linux host with Nix can enter the devshell from `flake.nix`. The devcontainer is optional ([D-0013](decisions.md#d-0013-build-entry)). |
 | NFR-07 | Decisions and pitfalls keep stable ids. Completed gaps are written down instead of left as comments in code. |
+| NFR-08 | `input` and `ui` reach playback only through player commands and the status snapshot ([D-0042](decisions.md#d-0042-core2-components)). |
 
 ## Trace to the notes
 

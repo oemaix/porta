@@ -1,10 +1,10 @@
 # Roadmap
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 ## Current status
 
-**Phase 0 is the current phase for the Core2.** The specification and the Nix skeleton are in the working tree. The Core2 application is not written. Postern's phase-1 path is in the submodule and has not been run on a board.
+**Phase 0 is the current phase for the Core2.** The specification and the Nix skeleton are in the working tree. The Core2 component split is specified ([D-0042](decisions.md#d-0042-core2-components)) and the application is not written. Postern's phase-1 path is in the submodule and has not been run on a board.
 
 | Phase | State | Exit |
 | --- | --- | --- |

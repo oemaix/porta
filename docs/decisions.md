@@ -1,6 +1,6 @@
 # Decisions
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
 Ids are `D-xxxx`. They are not reused and not renumbered. A later change supersedes an id by pointing at a new one. Status is **Decided** or **Undecided**. A recommendation under an open id is not a decision.
 
@@ -49,6 +49,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
 | [D-0040](#d-0040-python) | Undecided | The flake's Python is enough until a package is needed |
 | [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
+| [D-0042](#d-0042-core2-components) | Decided | Core2 image: panel, player, and sink |
 
 ## Decided
 
@@ -197,7 +198,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** Phase 0 does not add application source or a `firmware/` tree. The framework itself is [D-0028](#d-0028-firmware-framework).
 - **Source:** Reasonable completion. An empty tree would imply a layout the firmware has not earned yet.
-- **Consequence:** The first firmware change includes the layout and supersedes this id's "no tree" clause. It does not reuse the id.
+- **Consequence:** The first firmware change includes the layout and supersedes this id's "no tree" clause. It does not reuse the id. That layout is [D-0042](#d-0042-core2-components).
 
 ### D-0022 Development host
 
@@ -300,9 +301,23 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 
 - **Status:** Decided
 - **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is `https://github.com/oemaix/postern.git`, branch `main`. Another project builds that component into its own application and flashes that image.
-- **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2. A2DP, SBC, and AAC stay in Postern.
+- **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
 - **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
 - **Consequence:** Phase 0 still has no Core2 `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
+
+### D-0041 Devcontainer host
+
+- **Status:** Decided
+- **Choice:** Reopen in Container offers two configs that share `.devcontainer/Dockerfile`. **Porta (Nix on Ubuntu)** is `.devcontainer/devcontainer.json` and uses the single-user Nix installed in the image. **Porta (NixOS host store)** is `.devcontainer/nixos-host/devcontainer.json`. It bind-mounts the host `/nix` read-only and talks to the host daemon.
+- **Source:** The host-store mount does not start on a machine with no `/nix`. The two-config layout is the selectable pair from another project's devcontainer, without its GPU config or its multi-user Nix feature.
+- **Consequence:** [D-0014](#d-0014-devcontainer-base) still builds one Ubuntu 26.04 image. The host-store rules are [P-0033](pitfalls.md#p-0033-host-nix-store). The Ubuntu config must not mount `/nix` ([P-0035](pitfalls.md#p-0035-one-devcontainer-for-every-host)). A NixOS host picks the host-store entry.
+
+### D-0042 Core2 components
+
+- **Status:** Decided
+- **Choice:** The Core2 application is one ESP-IDF image. Its phase 1 components are `app`, `input`, `ui`, `player`, `sink`, `net`, and `board`. `input` and `ui` are the panel and exchange the four actions. `ui` sends the player only play, pause, next, previous, and set volume, and reads one status snapshot. `player` delivers PCM only to `sink`. Scopes, tasks, and the phase 2 seams are [software](software.md).
+- **Source:** Project decision, 2026-10-29. [FR-04](requirements.md) already keeps navigation inside the UI API. [D-0029](#d-0029-spotify-transport) already sends transport calls to the Connect session and PCM to Porta's I2S sink.
+- **Consequence:** Phase 0 still has no `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). The first firmware change uses these component names. The phase 1 image does not link AirPlay, DLNA, the line input, or a Postern client ([D-0023](#d-0023-separate-phase-1-prototypes), [P-0012](pitfalls.md#p-0012-phase-creep)). The panel does not call the drivers behind that seam ([P-0038](pitfalls.md#p-0038-panel-calls-the-player)).
 
 ## Undecided
 
@@ -363,11 +378,4 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Recommendation:** The flake is enough today. The hook and the shell scripts use the standard library and nothing from PyPI. Add `uv` to `flake.nix`, and create a gitignored `.venv` with it, on the day a third-party package is imported. Do not use `pip`. Keep that environment separate from the Python tree ESP-IDF will install for `idf.py`.
 - **Source:** Project question, 2026-10-28.
 - **Consequence:** No `.venv`, no `uv`, and no `requirements.txt` until this id closes. Postern's shell matches this one. [P-0029](pitfalls.md#p-0029-pip).
-
-### D-0041 Devcontainer host
-
-- **Status:** Decided
-- **Choice:** Reopen in Container offers two configs that share `.devcontainer/Dockerfile`. **Porta (Nix on Ubuntu)** is `.devcontainer/devcontainer.json` and uses the single-user Nix installed in the image. **Porta (NixOS host store)** is `.devcontainer/nixos-host/devcontainer.json`. It bind-mounts the host `/nix` read-only and talks to the host daemon.
-- **Source:** The host-store mount does not start on a machine with no `/nix`. The two-config layout is the selectable pair from another project's devcontainer, without its GPU config or its multi-user Nix feature.
-- **Consequence:** [D-0014](#d-0014-devcontainer-base) still builds one Ubuntu 26.04 image. The host-store rules are [P-0033](pitfalls.md#p-0033-host-nix-store). The Ubuntu config must not mount `/nix` ([P-0035](pitfalls.md#p-0035-one-devcontainer-for-every-host)). A NixOS host picks the host-store entry.
 
