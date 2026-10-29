@@ -38,6 +38,7 @@ The default terminal profile **Nix Develop** runs the same shell, using zsh when
 ```text
 README.md
 docs/                  specification
+firmware/              Core2 application, not linked yet
 postern/               I2S-to-Bluetooth component submodule
 flake.nix              development shell
 .devcontainer/         optional Ubuntu LTS + Nix
@@ -46,4 +47,4 @@ flake.nix              development shell
 tmp/                   local design scratch (not tracked)
 ```
 
-The firmware framework is ESP-IDF ([D-0028](docs/decisions.md#d-0028-firmware-framework)). The Core2 application is still absent ([D-0021](docs/decisions.md#d-0021-no-firmware-tree)). Postern is the bridge component ([D-0039](docs/decisions.md#d-0039-firmware-repos)). The license is Apache 2.0.
+The firmware framework is ESP-IDF ([D-0028](docs/decisions.md#d-0028-firmware-framework)). The Core2 application is [firmware/](firmware/README.md) and is not linked ([D-0043](docs/decisions.md#d-0043-firmware-tree)). Postern is the bridge component ([D-0039](docs/decisions.md#d-0039-firmware-repos)). The license is Apache 2.0.

@@ -50,6 +50,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0040](#d-0040-python) | Undecided | The flake's Python is enough until a package is needed |
 | [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
 | [D-0042](#d-0042-core2-components) | Decided | Core2 image: panel, player, and sink |
+| [D-0043](#d-0043-firmware-tree) | Decided | Core2 tree exists; tone stand-in; I2S still off |
 
 ## Decided
 
@@ -198,7 +199,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** Phase 0 does not add application source or a `firmware/` tree. The framework itself is [D-0028](#d-0028-firmware-framework).
 - **Source:** Reasonable completion. An empty tree would imply a layout the firmware has not earned yet.
-- **Consequence:** The first firmware change includes the layout and supersedes this id's "no tree" clause. It does not reuse the id. That layout is [D-0042](#d-0042-core2-components).
+- **Consequence:** The first firmware change includes the layout and supersedes this id's "no tree" clause. It does not reuse the id. That change is [D-0043](#d-0043-firmware-tree). The layout is [D-0042](#d-0042-core2-components).
 
 ### D-0022 Development host
 
@@ -233,7 +234,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** Both the Core2 and the Stamp Pico are ESP-IDF applications. One IDF generation covers both. Arduino and PlatformIO are not used.
 - **Source:** Project decision, 2026-10-28.
-- **Consequence:** `flake.nix` installs `esptool`, CMake, and Ninja from nixpkgs 26.05. That pin has no ESP-IDF package and no Xtensa toolchain. The usual Nix ESP-IDF flakes are pinned to older nixpkgs and currently break on 26.05 because Python 3.10 was removed. They are not inputs of this flake. `idf.py` arrives in a later change that can build against this pin. There is still no `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)).
+- **Consequence:** `flake.nix` installs `esptool`, host `gcc`, CMake, and Ninja from nixpkgs 26.05. That pin has no ESP-IDF package and no Xtensa toolchain. The usual Nix ESP-IDF flakes are pinned to older nixpkgs and currently break on 26.05 because Python 3.10 was removed. They are not inputs of this flake. `idf.py` arrives in a later change that can build against this pin. The application tree is [D-0043](#d-0043-firmware-tree).
 
 ### D-0029 Spotify transport
 
@@ -303,7 +304,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is `https://github.com/oemaix/postern.git`, branch `main`. Another project builds that component into its own application and flashes that image.
 - **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
 - **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
-- **Consequence:** Phase 0 still has no Core2 `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
+- **Consequence:** The Core2 tree is [D-0043](#d-0043-firmware-tree). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
 
 ### D-0041 Devcontainer host
 
@@ -317,7 +318,14 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** The Core2 application is one ESP-IDF image. Its phase 1 components are `app`, `input`, `ui`, `player`, `sink`, `net`, and `board`. `input` and `ui` are the panel and exchange the four actions. `ui` sends the player only play, pause, next, previous, and set volume, and reads one status snapshot. `player` delivers PCM only to `sink`. Scopes, tasks, and the phase 2 seams are [software](software.md).
 - **Source:** Project decision, 2026-10-29. [FR-04](requirements.md) already keeps navigation inside the UI API. [D-0029](#d-0029-spotify-transport) already sends transport calls to the Connect session and PCM to Porta's I2S sink.
-- **Consequence:** Phase 0 still has no `firmware/` tree ([D-0021](#d-0021-no-firmware-tree)). The first firmware change uses these component names. The phase 1 image does not link AirPlay, DLNA, the line input, or a Postern client ([D-0023](#d-0023-separate-phase-1-prototypes), [P-0012](pitfalls.md#p-0012-phase-creep)). The panel does not call the drivers behind that seam ([P-0038](pitfalls.md#p-0038-panel-calls-the-player)).
+- **Consequence:** The first firmware change uses these component names ([D-0043](#d-0043-firmware-tree)). The phase 1 image does not link AirPlay, DLNA, the line input, or a Postern client ([D-0023](#d-0023-separate-phase-1-prototypes), [P-0012](pitfalls.md#p-0012-phase-creep)). The panel does not call the drivers behind that seam ([P-0038](pitfalls.md#p-0038-panel-calls-the-player)).
+
+### D-0043 Firmware tree
+
+- **Status:** Decided
+- **Choice:** The Core2 application is `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in the header-only component `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. Hardware I2S and Wi-Fi stay off. The image is not linked, because `idf.py` is still absent.
+- **Source:** Phase 1 implementation, 2026-10-29. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
+- **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0039](pitfalls.md#p-0039-tone-stand-in)). The codec stays off until the rail is measured ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
 
 ## Undecided
 

@@ -30,7 +30,7 @@ The phase 1 set is small and must be finishable with the wheel alone ([FR-05](re
 
 | Screen | Purpose |
 | --- | --- |
-| Now Playing | Title, play or pause, volume |
+| Now Playing | Title, play or pause, Louder, Quieter, and the way into Connect and Settings |
 | Connect | Wi-Fi state, and the phase 1 login step once [D-0030](decisions.md#d-0030-login) exists |
 | Settings | Entries that exist in phase 1 only. Battery is absent until phase 2 |
 

@@ -4,12 +4,12 @@ Status: baseline · 2026-10-29
 
 ## Current status
 
-**Phase 0 is the current phase for the Core2.** The specification and the Nix skeleton are in the working tree. The Core2 component split is specified ([D-0042](decisions.md#d-0042-core2-components)) and the application is not written. Postern's phase-1 path is in the submodule and has not been run on a board.
+**Phase 1 is the current phase for the Core2.** The application tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). It has not exited: UC-01 through UC-04 have not passed on hardware. Playback is the labelled tone stand-in. Hardware I2S and Wi-Fi are not started. Postern's phase-1 path is in the submodule and has not been run on a board.
 
 | Phase | State | Exit |
 | --- | --- | --- |
-| 0. Specification and skeleton | Current | Docs stand alone, `nix develop` opens a shell, editor and agent entry points exist |
-| 1. Separate prototypes and a usable UI | Not started | UC-01 through UC-04 pass on hardware |
+| 0. Specification and skeleton | Done | Docs stand alone, `nix develop` opens a shell, editor and agent entry points exist |
+| 1. Separate prototypes and a usable UI | Current | UC-01 through UC-04 pass on hardware |
 | 2. One product | Not started | UC-05 through UC-08 pass, and the phase 1 actions are unchanged |
 
 ## Phase 1
@@ -31,11 +31,9 @@ Not in this phase: AirPlay, DLNA, auxiliary mode, the easier login, battery indi
 - An easier login than phase 1, after [D-0030](decisions.md#d-0030-login).
 - Battery level and a low-battery power-off, after [D-0033](decisions.md#d-0033-power-architecture).
 
-## Blockers before phase 1 code
+## Still open for a hardware pass
 
-Close, or explicitly accept a prototype stand-in for:
-
-- [D-0028](decisions.md#d-0028-firmware-framework) is closed: ESP-IDF. `idf.py` is not in the shell yet.
-- [D-0029](decisions.md#d-0029-spotify-transport) is closed: cspot on the Core2. Catalog search is still later, via the Web API.
-- [D-0031](decisions.md#d-0031-board-link) and [D-0032](decisions.md#d-0032-i2s-format) are closed. Phase 1 may still bring the boards up separately.
-- [D-0033](decisions.md#d-0033-power-architecture) before the stack is powered as a product. A bench supply is a valid phase 1 stand-in if the decision says so.
+- [D-0028](decisions.md#d-0028-firmware-framework) is closed: ESP-IDF. `idf.py` is not in the shell yet, so `firmware/` is not linked.
+- [D-0029](decisions.md#d-0029-spotify-transport) is closed: cspot on the Core2. The tree uses the labelled tone stand-in until that library is linked ([P-0039](pitfalls.md#p-0039-tone-stand-in)). Catalog search is still later.
+- [D-0031](decisions.md#d-0031-board-link) and [D-0032](decisions.md#d-0032-i2s-format) are closed. Phase 1 still brings the boards up separately.
+- [D-0033](decisions.md#d-0033-power-architecture) stays open for the product. The prototypes accept a bench supply ([D-0043](decisions.md#d-0043-firmware-tree)). That is not a measured AXP192 limit, so I2S and Wi-Fi stay off ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).

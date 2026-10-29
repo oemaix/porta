@@ -236,6 +236,18 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not call cspot, the ES8388, I2S, or the Wi-Fi driver from `input` or `ui`. Do not put PCM in the status snapshot. Do not add a second process, a socket, or a widget toolkit as the seam between the panel and the player.
 - **Why:** [D-0042](decisions.md#d-0042-core2-components). The Core2 image is one ESP-IDF application. The seam is player commands and one snapshot ([software](software.md)). PCM stays on the path from `player` to `sink`. A toolkit or a second process spends the RAM the session needs and gives the screens another way to reach the codec.
 
+### P-0039 Tone stand-in
+
+- **Status:** Open
+- **Avoid:** Do not label the phase 1 stand-in as Spotify, Connect, or a decoded track. Do not drop the words "tone stand-in" from the status title.
+- **Why:** cspot is not linked ([P-0001](#p-0001-spotify-on-the-esp32), [D-0043](decisions.md#d-0043-firmware-tree)). A listener who sees a track title will treat the triangle wave as the product.
+
+### P-0040 Unmeasured rail
+
+- **Status:** Open
+- **Avoid:** Do not start Module Audio I2S, and do not start Wi-Fi, from this tree before the AXP192 current limit is a measured value. Do not paste a generic ES8388 init that also enables the NS4168. Do not treat the bench supply as that measurement.
+- **Why:** [NFR-04](requirements.md) and [P-0018](#p-0018-brownout). The internal codec shares the Module Audio pins ([P-0006](#p-0006-internal-i2s)). [D-0043](decisions.md#d-0043-firmware-tree) accepts a bench supply for the prototypes and leaves `porta_board_i2s_allowed` false.
+
 ## Resolved
 
 [P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. The text stays above so the ids are not reused.

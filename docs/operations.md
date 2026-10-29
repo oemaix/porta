@@ -1,8 +1,8 @@
 # Operations
 
-Status: baseline · 2026-10-28
+Status: baseline · 2026-10-29
 
-Phase 0 has a development shell and an editor setup. The framework is ESP-IDF ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `esptool` and does not yet provide `idf.py` or the Xtensa toolchain. It does not flash a board.
+The framework is ESP-IDF ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `esptool` and a host `gcc`. It does not yet provide `idf.py` or the Xtensa toolchain. It does not flash a board. The Core2 tree is `firmware/` and is not linked ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -14,9 +14,38 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, and `esptool` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python3` and the standard library. There is no `.venv` yet ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)).
+The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, host `gcc`, and `esptool` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python3` and the standard library. There is no `.venv` yet ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. It is not the Xtensa toolchain.
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
+
+## Core2 host test
+
+`firmware/` is the Core2 application. `idf.py` cannot link it yet. The panel, the player commands, and the tone PCM run as a host program. The binary goes under `tmp/`, which is scratch.
+
+```sh
+gcc -std=c11 -Wall -Wextra -Werror \
+  -I firmware/components/seam/include \
+  -I firmware/components/input/include \
+  -I firmware/components/ui/include \
+  -I firmware/components/player/include \
+  -I firmware/components/sink/include \
+  -I firmware/components/net/include \
+  -I firmware/components/board/include \
+  -I firmware/components/app/include \
+  firmware/components/seam/porta_seam.c \
+  firmware/components/input/porta_input.c \
+  firmware/components/ui/porta_ui.c \
+  firmware/components/player/porta_player.c \
+  firmware/components/sink/porta_sink.c \
+  firmware/components/net/porta_net.c \
+  firmware/components/board/porta_board.c \
+  firmware/components/app/porta_app.c \
+  firmware/tests/porta_phase1_test.c \
+  -o tmp/porta-phase1-test
+tmp/porta-phase1-test
+```
+
+Stage `flake.nix` before the next `nix develop` if that file changed ([P-0022](pitfalls.md#p-0022-untracked-flake-files)).
 
 ## Postern
 
@@ -78,12 +107,12 @@ Three local rules apply in every session:
 
 - Read and extend [pitfalls](pitfalls.md).
 - Update `.cursor/rules/` when a convention will be needed again.
-- ESP-IDF is the framework. Do not add Arduino or PlatformIO. Do not add an application tree until that work starts.
+- ESP-IDF is the framework. Do not add Arduino or PlatformIO. The Core2 application is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 The rules are reminders. The tracked text is this suite.
 
 ## What this phase does not do
 
 - It does not select a serial port, a baud rate, or a flash offset.
-- It does not build an artifact.
-- It does not create an application directory.
+- It does not link or flash the Core2 image.
+- The host test above is the check this shell can run.

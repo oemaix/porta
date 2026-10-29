@@ -20,9 +20,10 @@
         in
         {
           default = pkgs.mkShell {
-            # ESP-IDF is the framework (D-0028). nixpkgs 26.05 has esptool,
-            # not a packaged IDF or Xtensa toolchain. Do not add a third-party
-            # ESP-IDF flake here until it builds against this nixpkgs pin.
+            # ESP-IDF is the framework (D-0028). nixpkgs 26.05 has esptool
+            # and a host gcc for the firmware logic test, not a packaged IDF
+            # or Xtensa toolchain. Do not add a third-party ESP-IDF flake
+            # here until it builds against this nixpkgs pin.
             # shell/.zshrc is the interactive prompt and keeps `exit` at 0 (P-0034).
             shellHook = ''
               zdotdir=${./shell}
@@ -47,6 +48,7 @@
               which
               cmake
               ninja
+              gcc
               esptool
             ];
           };
