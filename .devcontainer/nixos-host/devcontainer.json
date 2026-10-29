@@ -8,6 +8,9 @@
   "init": true,
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
+  "capAdd": ["SYS_ADMIN"],
+  "securityOpt": ["seccomp=unconfined"],
+  "runArgs": ["--device=/dev/ttyUSB0", "--group-add=dialout"],
   "containerEnv": {
     "NIX_CONFIG": "experimental-features = nix-command flakes",
     "NIX_REMOTE": "daemon",

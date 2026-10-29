@@ -2,7 +2,7 @@
 
 Status: baseline · 2026-10-29
 
-The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a serial port. The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a baud rate or a flash offset. The devcontainer passes the host node `/dev/ttyUSB0` ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -64,7 +64,7 @@ The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later 
 
 ## Devcontainer
 
-The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)).
+The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)). Both configs add `SYS_ADMIN` and `seccomp=unconfined` so `idf.py` can create its mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). Both pass `/dev/ttyUSB0` and add the `dialout` group ([P-0043](pitfalls.md#p-0043-serial-device-node)). Plug the adapter in before Reopen in Container. A rebuild is required before a running container sees either change.
 
 Reopen in Container asks which config to use ([D-0041](decisions.md#d-0041-devcontainer-host)).
 
@@ -124,6 +124,6 @@ The rules are reminders. The tracked text is this suite.
 
 ## What this phase does not do
 
-- It does not select a serial port, a baud rate, or a flash offset.
+- It does not select a baud rate or a flash offset. The devcontainer node is `/dev/ttyUSB0` when that path exists on the host.
 - It does not flash a board by itself. `idf.py build` in `firmware/` is the image build, where a mount namespace is allowed.
 - The host test does not need the chip toolchain.

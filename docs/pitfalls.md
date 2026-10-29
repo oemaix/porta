@@ -258,8 +258,14 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not drop [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) because bubblewrap failed in one container. Do not replace it with an ESP-IDF flake pinned to an older nixpkgs.
-- **Why:** `idf.py` runs inside `buildFHSEnv`. That needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. The wrapper is still the shell's `idf.py` ([D-0028](decisions.md#d-0028-firmware-framework)).
+- **Why:** `idf.py` runs inside `buildFHSEnv`. That needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. bubblewrap 0.12 uses `clone3`, which Docker's default seccomp profile rejects. Both Porta devcontainers add `SYS_ADMIN` and `seccomp=unconfined` ([D-0014](decisions.md#d-0014-devcontainer-base)). A running container does not gain that until it is rebuilt. The wrapper is still the shell's `idf.py` ([D-0028](decisions.md#d-0028-firmware-framework)).
+
+### P-0043 Serial device node
+
+- **Status:** Open
+- **Avoid:** Do not pass the whole host `/dev` tree into the container. Do not name a baud rate or a flash offset in `devcontainer.json`. Do not start the container while `/dev/ttyUSB0` is absent on the host.
+- **Why:** USB serial on Linux is major 188. The node name is assigned when the adapter enumerates. This bench uses `/dev/ttyUSB0`, and both Porta devcontainers pass that node with `--device` and add the `dialout` group ([D-0014](decisions.md#d-0014-devcontainer-base)). Docker refuses to create the container when the path is missing. A later plug-in does not appear until the container is created again. The image account already belongs to `dialout` ([P-0031](#p-0031-ubuntu-uid-1000)). `idf.py` sees the node because its sandbox bind-mounts the container `/dev`.
 
 ## Resolved
 
-[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. The text stays above so the ids are not reused.
+[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. [P-0043](#p-0043-serial-device-node) records the host serial node the container receives. The text stays above so the ids are not reused.
