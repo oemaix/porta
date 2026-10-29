@@ -15,6 +15,7 @@ Porta is a portable audio appliance built on M5Stack Core2 v1.3. It plays a Spot
 | [Requirements](docs/requirements.md) | Functional and non-functional requirements |
 | [UI design](docs/ui-design.md) | Inputs, screens, visual rules |
 | [Architecture](docs/architecture.md) | Boards, audio paths, buses |
+| [Cable](postern/docs/cable.md) | Application note for the I2C and I2S link. It lives in Postern. |
 | [Software](docs/software.md) | Core2 components and how they meet |
 | [Operations](docs/operations.md) | Devshell, container, editor, agent hook |
 | [Roadmap](docs/roadmap.md) | Phases and current status |
@@ -38,7 +39,7 @@ The default terminal profile **Nix Develop** runs the same shell, using zsh when
 ```text
 README.md
 docs/                  specification
-firmware/              Core2 application, built with idf.py
+firmware/              Core2 application, Rust on ESP-IDF v5.5.6
 postern/               Stamp Pico firmware submodule, built with its own idf.py
 flake.nix              development shell
 .devcontainer/         optional Ubuntu LTS + Nix
@@ -47,4 +48,4 @@ flake.nix              development shell
 tmp/                   local design scratch (not tracked)
 ```
 
-The firmware framework is ESP-IDF v6.1 ([D-0028](docs/decisions.md#d-0028-firmware-framework)). The Core2 application is [firmware/](firmware/README.md) and builds with `idf.py` from this shell ([D-0043](docs/decisions.md#d-0043-firmware-tree)). Postern is the Stamp Pico image, in the submodule, with its own shell ([D-0045](docs/decisions.md#d-0045-postern-image)). The license is Apache 2.0.
+The Core2 application is [firmware/](firmware/README.md), Rust on ESP-IDF v5.5.6 ([D-0046](docs/decisions.md#d-0046-core2-language)). Postern is the Stamp Pico image, C on ESP-IDF v6.1, in the submodule, with its own shell ([D-0045](docs/decisions.md#d-0045-postern-image)). The license is Apache 2.0.

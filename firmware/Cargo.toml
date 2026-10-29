@@ -1,0 +1,21 @@
+[package]
+name = "porta"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+rust-version = "1.82"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "porta"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "espidf")'.dependencies]
+esp-idf-svc = "0.53"
+log = "0.4"
+
+[build-dependencies]
+embuild = { version = "0.33", features = ["espidf"] }

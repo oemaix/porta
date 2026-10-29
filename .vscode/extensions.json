@@ -4,7 +4,8 @@
     "editorconfig.editorconfig",
     "DavidAnson.vscode-markdownlint",
     "yzhang.markdown-all-in-one",
-    "ms-vscode.cpptools",
+        "rust-lang.rust-analyzer",
+        "ms-vscode.cpptools",
     "ms-vscode.vscode-serial-monitor",
     "ms-python.python"
   ]

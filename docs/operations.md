@@ -2,7 +2,7 @@
 
 Status: baseline · 2026-10-29
 
-The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a baud rate or a flash offset. The devcontainer links every host `ttyUSB*` and `ttyACM*` node into `/dev` while it runs, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 on this bench is `/dev/ttyACM0`. `~/.espressif` in this image is `/root/.espressif`. The devcontainer bind-mounts the login user's `~/.espressif` on the host there ([P-0041](pitfalls.md#p-0041-eim-home-install)). The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+The Core2 application is Rust on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). The Porta shell provides `cargo` and `rustc` for the host test. It does not yet provide `idf.py` or the Xtensa ESP-IDF Rust target, so the Core2 image is not built from this shell yet. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). The Stamp Pico image is Postern, and that shell provides `idf.py` for ESP-IDF v6.1. The devcontainer links every host `ttyUSB*` and `ttyACM*` node into `/dev` while it runs, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 on this bench is `/dev/ttyACM0`. The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -14,49 +14,23 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, zsh, bash, CMake, Ninja, host `gcc`, `esptool`, and `idf.py` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. The flake does not provide Python ([D-0044](decisions.md#d-0044-python-out-of-the-flake), [P-0044](pitfalls.md#p-0044-python-in-the-flake)). There is no `.venv`. A later third-party import gets a gitignored `.venv` from `uv`, and `pip` stays unused ([P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. `idf.py` is the ESP-IDF v6.1 wrapper. Its Python is 3.13 from this nixpkgs pin, inside the Installation Manager's own environment.
+The shell replaces `PATH`. Git, zsh, bash, CMake, Ninja, host `gcc`, `rustc`, and `cargo` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. The flake does not provide Python ([D-0044](decisions.md#d-0044-python-out-of-the-flake), [P-0044](pitfalls.md#p-0044-python-in-the-flake)). There is no `.venv`. A later third-party import gets a gitignored `.venv` from `uv`, and `pip` stays unused ([P-0029](pitfalls.md#p-0029-pip)). `cargo test` is the Core2 host check. `idf.py` is not in this shell ([D-0046](decisions.md#d-0046-core2-language)).
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
 
 ## Core2 host test
 
-`firmware/` is the Core2 application. This check compiles the panel, the player commands, and the tone PCM with host `gcc`. It does not call `idf.py`. The binary goes under `tmp/`, which is scratch.
+`firmware/` is the Core2 application. This check runs the panel, the player commands, and the tone PCM on the host. It does not build the ESP-IDF image.
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Werror \
-  -I firmware/components/seam/include \
-  -I firmware/components/input/include \
-  -I firmware/components/ui/include \
-  -I firmware/components/player/include \
-  -I firmware/components/sink/include \
-  -I firmware/components/net/include \
-  -I firmware/components/board/include \
-  -I firmware/components/app/include \
-  firmware/components/seam/porta_seam.c \
-  firmware/components/input/porta_input.c \
-  firmware/components/ui/porta_ui.c \
-  firmware/components/player/porta_player.c \
-  firmware/components/sink/porta_sink.c \
-  firmware/components/net/porta_net.c \
-  firmware/components/board/porta_board.c \
-  firmware/components/app/porta_app.c \
-  firmware/tests/porta_phase1_test.c \
-  -o tmp/porta-phase1-test
-tmp/porta-phase1-test
+cargo test --manifest-path firmware/Cargo.toml
 ```
 
 Stage `flake.nix` and `flake.lock` before the next `nix develop` if either file changed ([P-0022](pitfalls.md#p-0022-untracked-flake-files)).
 
 ## Core2 image
 
-From this shell, in `firmware/`:
-
-```sh
-idf.py set-target esp32
-idf.py build
-```
-
-The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later commands reuse that install. `idf.py` enters that install through bubblewrap and needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host, where that prefix is missing, the shell binds the login user's tree there for the ESP-IDF commands ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). Flash with `idf.py -p` and the port chosen at that moment. This page does not name a port, a baud rate, or an offset.
+The image target is `xtensa-esp32-espidf`, and `firmware/.cargo/config.toml` pins ESP-IDF v5.5.6. This shell does not yet contain that Rust target or the v5.5.6 tree, so the image is not built here. Adding them is open ([roadmap](roadmap.md)). A passing `cargo test` is not that image ([P-0048](pitfalls.md#p-0048-core2-image-target)). This page does not name a port, a baud rate, or an offset.
 
 ## Postern
 
@@ -67,11 +41,11 @@ idf.py set-target esp32
 idf.py build
 ```
 
-`firmware/` stays the Core2 image. Do not add a second Stamp Pico tree here ([P-0047](pitfalls.md#p-0047-postern-image)).
+`firmware/` stays the Core2 image. Do not add a second Stamp Pico tree here ([D-0045](decisions.md#d-0045-postern-image)).
 
 ## Devcontainer
 
-The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)). Both configs add `SYS_ADMIN` and `seccomp=unconfined` so `idf.py` can create its mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). Both bind the host `/dev` at `/host-dev`. The entrypoint links every `ttyUSB*` and `ttyACM*` node there, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The host tty rule is `.devcontainer/nixos-host/serial.rules`: mode `0660`, group `dialout`, and tag `uaccess`. NixOS imports `.devcontainer/nixos-host/serial-udev.nix` from the host configuration. After that system rebuild, replug the cable so logind grants the session user. That user is uid 0 in this container. A non-NixOS host installs the same rule under `/etc/udev/rules.d/`. Both configs bind the login user's `~/.espressif` on the host onto `/root/.espressif`. Reloading the IDE keeps the running container and its writable layer. Rebuilding the container starts a new layer. Copy `/root/.espressif` to that user's home before that rebuild, or the bind hides the copy that exists only in the old layer. A rebuild is required before a running container sees `SYS_ADMIN`, `/host-dev`, and the entrypoint link. The Dockerfile is unchanged.
+The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)). Both configs add `SYS_ADMIN` and `seccomp=unconfined`. That was required when this shell ran `idf.py` ([P-0042](pitfalls.md#p-0042-fhs-namespace)). The Core2 crate does not call `idf.py` ([D-0046](decisions.md#d-0046-core2-language)). Postern's own container still needs the namespace for its shell. Both bind the host `/dev` at `/host-dev`. The entrypoint links every `ttyUSB*` and `ttyACM*` node there, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The host tty rule is `.devcontainer/nixos-host/serial.rules`: mode `0660`, group `dialout`, and tag `uaccess`. NixOS imports `.devcontainer/nixos-host/serial-udev.nix` from the host configuration. After that system rebuild, replug the cable so logind grants the session user. That user is uid 0 in this container. A non-NixOS host installs the same rule under `/etc/udev/rules.d/`. Both configs bind the login user's `~/.espressif` on the host onto `/root/.espressif`. Reloading the IDE keeps the running container and its writable layer. Rebuilding the container starts a new layer. Copy `/root/.espressif` to that user's home before that rebuild, or the bind hides the copy that exists only in the old layer. A rebuild is required before a running container sees `SYS_ADMIN`, `/host-dev`, and the entrypoint link. The Dockerfile is unchanged.
 
 Reopen in Container asks which config to use ([D-0041](decisions.md#d-0041-devcontainer-host)).
 
@@ -96,11 +70,12 @@ These are the extensions a workspace should install ([D-0024](decisions.md#d-002
 | `editorconfig.editorconfig` | Apply `.editorconfig` |
 | `DavidAnson.vscode-markdownlint` | Keep the doc suite consistent |
 | `yzhang.markdown-all-in-one` | Edit the doc suite |
-| `ms-vscode.cpptools` | ESP-IDF firmware is C |
+| `rust-lang.rust-analyzer` | The Core2 crate is Rust ([D-0046](decisions.md#d-0046-core2-language)) |
+| `ms-vscode.cpptools` | Postern is C |
 | `ms-vscode.vscode-serial-monitor` | Board bring-up logs |
 | `ms-python.python` | The agent hook. The flake does not provide its interpreter ([D-0044](decisions.md#d-0044-python-out-of-the-flake)) |
 
-The Espressif VS Code extension is not required. The shell provides `idf.py`. That extension would install a second copy ([D-0024](decisions.md#d-0024-editor-extensions)).
+The Espressif VS Code extension is not required. Postern's shell provides `idf.py`. That extension would install a second copy ([D-0024](decisions.md#d-0024-editor-extensions)).
 
 ## Agent shell hook
 
@@ -125,12 +100,12 @@ Three local rules apply in every session:
 
 - Read and extend [pitfalls](pitfalls.md).
 - Update `.cursor/rules/` when a convention will be needed again.
-- ESP-IDF is the framework. Do not add Arduino or PlatformIO. The Core2 application is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+- The Core2 application is the Rust crate in `firmware/`, on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). Do not add Arduino, PlatformIO, or an esp-hal image. Postern stays C on v6.1.
 
 The rules are reminders. The tracked text is this suite.
 
 ## What this phase does not do
 
 - It does not select a baud rate or a flash offset. The container nodes follow the host `ttyUSB*` and `ttyACM*` names. The Core2 on this bench is `/dev/ttyACM0`.
-- It does not flash a board by itself. `idf.py build` in `firmware/` is the image build, where a mount namespace is allowed.
+- It does not flash a board by itself. The Core2 image target is not in this shell yet ([roadmap](roadmap.md)). A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)).
 - The host test does not need the chip toolchain.

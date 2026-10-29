@@ -1,6 +1,6 @@
 # Pitfalls
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
 Open entries are binding. Do not delete an entry. Mark it resolved, with the reason, when it stops applying. New entries take the next id and are added in the same change that discovered them.
 
@@ -12,7 +12,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not implement the Spotify player as librespot, as a browser inside the Core2, as the Web Playback SDK, as the partner embedded SDK, or as the unmodified upstream cspot snapshot.
-- **Why:** The Web Playback SDK plays in a browser and does not return PCM. librespot does not run on the ESP32. The embedded SDK is not a public download. The Connect path that does run here is [D-0029](decisions.md#d-0029-spotify-transport). A tone or a plain HTTP stream may stand in until that library is linked, and it must be labelled as a stand-in.
+- **Why:** The Web Playback SDK plays in a browser and does not return PCM. librespot does not run on the ESP32. The embedded SDK is not a public download. The Connect path that does run here is [D-0029](decisions.md#d-0029-spotify-transport). A tone or a plain HTTP stream may stand in until that library is linked. Until then the status title is "Tone stand-in". Do not label the stand-in as Spotify, Connect, or a decoded track.
 
 ### P-0002 One radio, two jobs
 
@@ -24,7 +24,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat AAC as the first Bluetooth codec to bring up on the Stamp Pico.
-- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. The 2026-10-28 check of the codec path is [P-0024](#p-0024-aac-source). Measure free heap on this board after SBC is stable. If AAC does not fit, record the numbers here and supersede the codec goal with a new decision.
+- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. Postern records the same ban so that repository stands alone ([Postern P-0002](../postern/docs/pitfalls.md#p-0002-aac-first)). A linked encoder is not a passed session ([P-0024](#p-0024-aac-source)). Measure free heap on this board after SBC is stable. If AAC does not fit, record the numbers here and supersede the codec goal with a new decision.
 
 ### P-0004 Stack mechanics
 
@@ -55,12 +55,6 @@ Agents read this file before design or implementation work, and they add to it w
 - **Status:** Open
 - **Avoid:** Do not treat the two 3.5 mm jacks as a symmetric line-in and line-out pair.
 - **Why:** On Module Audio the TRS jack is microphone only. Headphones use the TRRS jack, whose mic wiring is either CTIA or OMTP. Line-in is the TRS jack. Confirm the ES8388 input mux against the jack you intend.
-
-### P-0009 Unbound HMI button
-
-- **Status:** Open
-- **Avoid:** Do not give HMI button index 3 a command.
-- **Why:** [D-0026](decisions.md#d-0026-second-hmi-button) is open. A convenient binding becomes a behaviour the listener learns, and then a compatibility problem.
 
 ### P-0010 microSD
 
@@ -108,30 +102,19 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not let both the Core2 and the Stamp Pico drive the I2S bit clock and word clock.
-- **Why:** Two masters on one wire is not a link. [D-0031](decisions.md#d-0031-board-link) and [D-0032](decisions.md#d-0032-i2s-format) have to name the master. Share a ground on that cable.
+- **Why:** Two masters on one wire is not a link. [D-0031](decisions.md#d-0031-board-link) names the Core2 as I2S master and the Stamp Pico as slave. Share a ground on that cable.
 
 ### P-0018 Brownout
 
 - **Status:** Open
-- **Avoid:** Do not start Wi-Fi transmit and I2S playback on the Core2 v1.3 without setting the AXP192 current limit on purpose and measuring the rail.
-- **Why:** The PMU will brown out under the combined load and the failure looks like a random reboot. NFR-04.
+- **Avoid:** Do not treat a brownout or a random reboot as unexplained while Wi-Fi transmit and I2S are both running and the AXP192 current limit is still unmeasured. Do not refuse to start those two for that reason.
+- **Why:** The combined load can brown out the PMU. The failure looks like a random reboot. It does not damage the Core2. Starting both before the limit is set on purpose and the rail is measured is allowed, and it is not the stable path. When that instability shows up, this is the first cause to check. NFR-04.
 
 ### P-0019 Container sandbox
 
 - **Status:** Open
 - **Avoid:** Do not copy `sandbox = false` from the devcontainer Nix config onto a host Nix install.
 - **Why:** It is there because a single-user Nix inside Docker often cannot use the user-namespace sandbox ([D-0014](decisions.md#d-0014-devcontainer-base)). The host keeps its own sandbox.
-
-### P-0020 No toolchain yet
-
-- **Status:** Resolved
-- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. Do not add an ESP-IDF Nix flake that is pinned to an older nixpkgs. [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) is not one of those flakes: it is built with this pin and installs v6.1 through EIM.
-
-### P-0021 Blackberry pixels
-
-- **Status:** Open
-- **Avoid:** Do not skin the UI as a Blackberry 7290 or 8100.
-- **Why:** Those phones are the reference for the wheel grammar in `ui.txt`, not for the pixels. [D-0011](decisions.md#d-0011-visual-language) is color blocks.
 
 ### P-0022 Untracked flake files
 
@@ -149,32 +132,19 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat an AAC encoder, or an AAC A2DP sink, as proof that the Stamp Pico can open an AAC A2DP source session.
-- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). Checked 2026-10-28: ESP-IDF 6.1 documents `a2dp_source_aac` for the ESP32 target. The application encodes MPEG-2 AAC LC with `esp_audio_codec` and registers that stream endpoint beside a mandatory SBC endpoint. The example does not ask for PSRAM. Espressif's codec table lists about 51 KB of heap for 48 kHz stereo AAC-LC, and about 40 KB of stack to run the encoder set. The Stamp Pico runs Classic Bluetooth and not Wi-Fi, so that heap is internal RAM. A minimal ESP32 image leaves on the order of 290 KB of data RAM; Classic Bluetooth is on the order of 70 KB for the controller in dual mode, and one measured Bluedroid enable took about 120 KB. Releasing the unused BLE controller is part of Espressif's own A2DP source example. Those figures leave room for 51 KB, the frame buffers, and the encoder stack. This tree has not measured the free heap after Bluedroid is up. Postern now links `esp_audio_codec` and registers an AAC endpoint beside SBC. A linked encoder is not a passed source session on this module. SBC is still the session that has to pass. Record the heap numbers here when Postern is first flashed.
+- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). ESP-IDF can register an AAC source endpoint beside a mandatory SBC endpoint. Postern links that encoder. A linked encoder is not a passed source session on this module, and the free heap after the Bluetooth stack is up has not been measured here. SBC is the session that has to pass ([P-0003](#p-0003-no-psram), [D-0007](decisions.md#d-0007-bluetooth-transmitter)). Postern records the same ban ([Postern P-0002](../postern/docs/pitfalls.md#p-0002-aac-first)). Record the heap numbers here when that image is first flashed.
 
 ### P-0025 Grove 5 V
 
 - **Status:** Open
 - **Avoid:** Do not connect the red Grove wire to a GPIO or to the Stamp Pico's 3.3 V pin.
-- **Why:** Grove red is 5 V. ESP32 GPIOs are not 5 V tolerant. Signal wires in [D-0031](decisions.md#d-0031-board-link) are 3.3 V. A 5 V feed belongs only on a pin the Stamp Pico regulates, if that pin exists on the carrier.
+- **Why:** Grove red is 5 V. ESP32 GPIOs are not 5 V tolerant. Signal wires in [D-0031](decisions.md#d-0031-board-link) are 3.3 V. A 5 V feed belongs only on a pin the Stamp Pico regulates, if that pin exists on the carrier. I2C pull-ups are the Core2 pair to 3.3 V, not this red wire ([Postern cable](../postern/docs/cable.md)).
 
 ### P-0026 cspot fork
 
 - **Status:** Open
 - **Avoid:** Do not vendor [feelfreelinux/cspot](https://github.com/feelfreelinux/cspot) at its last upstream snapshot. Do not flash [squeezelite-esp32](https://github.com/sle118/squeezelite-esp32) as the Porta firmware. Do not put cspot on the Stamp Pico.
 - **Why:** Upstream cspot does not build cleanly and its password login is declined. The fixes people are still playing through live in the [philippe44/cspot](https://github.com/philippe44/cspot) fork used by squeezelite-esp32. That firmware is a Squeezebox player. Porta takes the library and the command pattern only. cspot needs PSRAM. Integrators mark the fork GPL-3.0. Confirm the license file at the pinned commit before linking ([D-0029](decisions.md#d-0029-spotify-transport), [D-0037](decisions.md#d-0037-license)).
-
-### P-0027 Receiver codecs
-
-- **Status:** Open
-- **Avoid:** Do not add AirPlay 2. Do not advertise MP3, AAC, FLAC, Opus, Vorbis, WMA, or DSD on the DLNA renderer.
-- **Why:** [D-0036](decisions.md#d-0036-airplay-and-dlna) is AirPlay 1 plus LPCM, WAV PCM, and ALAC, all 16-bit stereo at 44.1 or 48 kHz. A longer codec list is a new decision.
-
-### P-0028 Postern file URL
-
-- **Status:** Resolved
-- **Avoid:** Do not give the Postern submodule a network URL until a remote exists, and do not replace `../postern` with an absolute path.
-- **Why:** The first pin was a local sibling. Cloning it uses the file transport, which this Git allows only when the command sets `protocol.file.allow=always`.
-- **Resolution:** The remote `https://github.com/oemaix/postern.git` exists. The submodule tracks branch `main` there ([D-0039](decisions.md#d-0039-firmware-repos)).
 
 ### P-0029 pip
 
@@ -186,7 +156,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not replace the Stamp Pico with an ESP32-S3, C2, C3, C5, C6, C61, H2, or S2 module.
-- **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit.
+- **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit. Postern records the same target ban ([Postern P-0010](../postern/docs/pitfalls.md#p-0010-not-an-s3)).
 
 ### P-0031 Ubuntu uid 1000
 
@@ -236,29 +206,23 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not call cspot, the ES8388, I2S, or the Wi-Fi driver from `input` or `ui`. Do not put PCM in the status snapshot. Do not add a second process, a socket, or a widget toolkit as the seam between the panel and the player.
 - **Why:** [D-0042](decisions.md#d-0042-core2-components). The Core2 image is one ESP-IDF application. The seam is player commands and one snapshot ([software](software.md)). PCM stays on the path from `player` to `sink`. A toolkit or a second process spends the RAM the session needs and gives the screens another way to reach the codec.
 
-### P-0039 Tone stand-in
-
-- **Status:** Open
-- **Avoid:** Do not label the phase 1 stand-in as Spotify, Connect, or a decoded track. Do not drop the words "tone stand-in" from the status title.
-- **Why:** cspot is not linked ([P-0001](#p-0001-spotify-on-the-esp32), [D-0043](decisions.md#d-0043-firmware-tree)). A listener who sees a track title will treat the triangle wave as the product.
-
 ### P-0040 Unmeasured rail
 
 - **Status:** Open
-- **Avoid:** Do not start Module Audio I2S, and do not start Wi-Fi, from this tree before the AXP192 current limit is a measured value. Do not paste a generic ES8388 init that also enables the NS4168. Do not treat the bench supply as that measurement.
-- **Why:** [NFR-04](requirements.md) and [P-0018](#p-0018-brownout). The internal codec shares the Module Audio pins ([P-0006](#p-0006-internal-i2s)). [D-0043](decisions.md#d-0043-firmware-tree) accepts a bench supply for the prototypes and leaves `porta_board_i2s_allowed` false.
+- **Avoid:** Do not forbid Wi-Fi or Module Audio I2S because the AXP192 current limit is not measured yet. Do not write a guessed milliamp limit into the tree and call it the measurement. Do not enable the NS4168 from a generic ES8388 init.
+- **Why:** Starting Wi-Fi and I2S together before that measurement is allowed and not recommended ([P-0018](#p-0018-brownout)). A brownout or a random reboot is suspected here first. The bench supply is not itself the measured limit ([D-0043](decisions.md#d-0043-firmware-tree)). `Board::limit_measured` stays false until the number is written down, and that flag does not block the start. The internal codec shares the Module Audio pins ([P-0006](#p-0006-internal-i2s)).
 
 ### P-0041 EIM home install
 
 - **Status:** Open
-- **Avoid:** Do not commit `~/.espressif` or `~/.cache/espidf-nix`. Do not expect the Nix store to contain the Xtensa toolchain. Do not point `IDF_VERSION` at an unpinned tag.
-- **Why:** [D-0028](decisions.md#d-0028-firmware-framework). [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) puts `idf.py` on `PATH`. Espressif's installer writes v6.1 under `~/.espressif` the first time that command runs. The store holds the wrapper and the pinned installer, not the chip tools. In this image that path is `/root/.espressif`, because the session runs as root ([P-0032](#p-0032-container-uid)). On the host the same tree is the login user's `~/.espressif`, not root's home ([D-0014](decisions.md#d-0014-devcontainer-base)). `~/.cache/espidf-nix` is left in the container layer. It is small and is written again when the activation script is newer. Reloading the IDE keeps the container, so an unmounted directory stays. Rebuilding the container drops the writable layer. Copy `/root/.espressif` to the login user's home before the rebuild that adds the bind, or the new container hides the copy that is still only in the old layer.
+- **Avoid:** Do not commit `~/.espressif` or `~/.cache/espidf-nix`. Do not expect the Nix store to contain the Xtensa toolchain. Do not point an ESP-IDF install at an unpinned tag.
+- **Why:** Chip tools land under `~/.espressif`, not in the Nix store. The Porta devcontainer bind-mounts the login user's tree onto `/root/.espressif` ([D-0014](decisions.md#d-0014-devcontainer-base), [P-0032](#p-0032-container-uid)). Postern's shell is what currently fills that tree with v6.1, the first time its `idf.py` runs. Postern records that install on its own ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). A later Core2 image install of v5.5.6 uses the same home, and one tree must not be asked to satisfy two IDF versions without a recorded layout. In this image the path is `/root/.espressif`, because the session runs as root. On the host it is the login user's `~/.espressif`. `~/.cache/espidf-nix` is left in the container layer and is written again when an activation script is newer. Reloading the IDE keeps the container. Rebuilding it drops the writable layer. Copy `/root/.espressif` to the login user's home before the rebuild that adds the bind, or the new container hides the copy that exists only in the old layer.
 
 ### P-0042 FHS namespace
 
 - **Status:** Open
-- **Avoid:** Do not drop [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) because bubblewrap failed in one container. Do not replace it with an ESP-IDF flake pinned to an older nixpkgs.
-- **Why:** `idf.py` runs inside `buildFHSEnv`. That needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. bubblewrap 0.12 uses `clone3`, which Docker's default seccomp profile rejects. Both Porta devcontainers add `SYS_ADMIN` and `seccomp=unconfined` ([D-0014](decisions.md#d-0014-devcontainer-base)). A running container does not gain that until it is rebuilt. The wrapper is still the shell's `idf.py` ([D-0028](decisions.md#d-0028-firmware-framework)).
+- **Avoid:** Do not add [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) back to the Porta flake. Do not treat `SYS_ADMIN` and `seccomp=unconfined` on the Porta devcontainer as a Core2 build input. Do not remove those flags on the grounds that the Core2 crate calls `idf.py`. Do not replace a shell that still runs `idf.py` with an ESP-IDF flake pinned to an older nixpkgs.
+- **Why:** [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. `cargo test` does not need a mount namespace. The flags and the `~/.espressif` bind stay so this container can still run a shell that does, including Postern's `idf.py`. That command runs inside `buildFHSEnv` and needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. bubblewrap 0.12 uses `clone3`, which Docker's default seccomp profile rejects ([D-0014](decisions.md#d-0014-devcontainer-base)). A running container does not gain the flags until it is rebuilt. Postern records the same namespace trap for its own container ([Postern P-0032](../postern/docs/pitfalls.md#p-0032-fhs-namespace)). Dropping the Porta flags is a separate change.
 
 ### P-0043 Serial device node
 
@@ -269,14 +233,14 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0044 Python in the flake
 
 - **Status:** Open
-- **Avoid:** Do not add `python3`, `python314`, `uv`, or `pip` to the Porta flake until a Porta script must import a third-party package. Do not treat the agent hooks or `idf.py` as that need.
-- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). `python314` and `uv` left the flake because this repository does not import them. `idf.py` keeps Python 3.13 inside `~/.espressif`. The hooks are standard-library scripts started by the host `python3`. When a third-party import arrives, add `uv` and create a gitignored `.venv` with it. `pip` stays out ([P-0029](#p-0029-pip)).
+- **Avoid:** Do not add `python3`, `python314`, `uv`, or `pip` to the Porta flake merely because a hook exists. Do not `pip install` for the image build.
+- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). The hooks are standard-library scripts started by the host `python3`. The Python inside an ESP-IDF install, and a flake package added because the Core2 image target needs it, are not this ban. Postern records the same policy for its flake ([Postern P-0028](../postern/docs/pitfalls.md#p-0028-python-in-the-flake)). `pip` stays out ([P-0029](#p-0029-pip)). A project `.venv` is created with `uv` on the day a Porta script imports a third-party package.
 
 ### P-0045 ESP-IDF install home
 
 - **Status:** Open
-- **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite the activation script to one absolute path. Do not drop the host bind because `idf.py` already worked in the container.
-- **Why:** Espressif's installer writes absolute paths into `activate_idf_v6.1.sh` and the virtualenv shebangs. In the devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind mount stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, `idf-use` does not find `idf.py`, and the command prints `could not set up v6.1`. A snapshot taken while those paths are missing caches an empty `ESP_IDF_VERSION`, and a later run keeps the empty value. The devshell puts wrappers ahead of `idf.py` and the other Installation Manager commands. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command and deletes the empty snapshot so the next run records `6.1`. The container already has `/root/.espressif`, so the wrapper runs the real command there.
+- **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite an activation script to one absolute path. Do not drop the host bind because a command already worked in the container.
+- **Why:** An ESP-IDF installer writes absolute paths into its activation script and virtualenv shebangs. Postern's v6.1 install does this, and Postern records the procedure ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). In the Porta devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, so a wrapper that expects them fails to set up the version. A snapshot taken while those paths are missing caches an empty version, and a later run keeps the empty value. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command. The container already has `/root/.espressif`, so the wrapper runs the real command there. A later v5.5.6 tree for the Core2 hits the same home split.
 
 ### P-0046 LCD rail and the microSD slot
 
@@ -284,12 +248,52 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not mount the microSD card because the panel rail is on. Do not turn that rail off to keep the slot dark. Do not drive GPIO4 low while the panel is using the shared SPI bus.
 - **Why:** ILI9342C logic power is AXP192 LDO2, and that rail also feeds the microSD slot. The backlight is DCDC3. LCD reset is AXP GPIO4. ESP32 GPIO4 is the card chip-select, a different pin ([architecture](architecture.md)). Phase 1 does not mount the card ([D-0025](decisions.md#d-0025-microsd-in-phase-1)). The panel code holds GPIO4 high so the slot ignores the bus.
 
-### P-0047 Postern image
+### P-0048 Core2 image target
 
 - **Status:** Open
-- **Avoid:** Do not add a Stamp Pico application in this repository. Do not run `idf.py` inside `postern/components/postern`.
-- **Why:** The Stamp Pico image is the Postern submodule ([D-0045](decisions.md#d-0045-postern-image)). `idf.py build` runs at `postern/`, in the Postern devshell. `firmware/` is the Core2 image ([D-0043](decisions.md#d-0043-firmware-tree)). The reusable component is `postern/components/postern`. Pointing `EXTRA_COMPONENT_DIRS` at the Postern repository root treats that project file as a component ([Postern P-0030](../postern/docs/pitfalls.md#p-0030-reuse-directory)).
+- **Avoid:** Do not treat a passing `cargo test` as a flashed Core2 image.
+- **Why:** [D-0046](decisions.md#d-0046-core2-language). `cargo test` covers the panel, the commands, and the tone. The framework ban — not `idf.py`, not ESP-IDF v6.1, not an esp-hal image — is that decision. The Xtensa Rust target and the v5.5.6 tree are not in this shell yet. That gap is [roadmap](roadmap.md) status. This entry does not forbid adding them.
 
 ## Resolved
 
-[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. [P-0043](#p-0043-serial-device-node) records the host serial node the container receives. [P-0047](#p-0047-postern-image) keeps the Stamp Pico image in the Postern submodule. The text stays above so the ids are not reused.
+### P-0009 Unbound HMI button
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [D-0026](decisions.md#d-0026-second-hmi-button). The old ban, "do not give button index 3 a command", made an open recommendation binding. That no longer applies.
+- **Resolution:** [D-0026](decisions.md#d-0026-second-hmi-button) stays open. The software reports the button and does not act on it. A prototype that binds it says in the title or the commit that the binding is not that decision.
+
+### P-0020 No toolchain yet
+
+- **Status:** Resolved
+- **Avoid:** Superseded for the Core2 by [D-0046](decisions.md#d-0046-core2-language), and for the Stamp Pico by [Postern D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell). The old note that the Porta shell installs v6.1 through EIM no longer applies.
+- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. The Core2 image is Rust on ESP-IDF v5.5.6. An ESP-IDF Nix flake pinned to an older nixpkgs stays out of either shell. Postern's shell installs v6.1 through EIM and records that ban itself ([Postern P-0006](../postern/docs/pitfalls.md#p-0006-idf-flake)).
+
+### P-0021 Blackberry pixels
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [D-0011](decisions.md#d-0011-visual-language). This entry added no mechanism beyond that decision.
+- **Resolution:** The screen is color blocks. It does not imitate a Blackberry 7290 or 8100. Those phones are the reference for the wheel grammar only.
+
+### P-0027 Receiver codecs
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [D-0036](decisions.md#d-0036-airplay-and-dlna).
+- **Resolution:** [D-0036](decisions.md#d-0036-airplay-and-dlna) is AirPlay 1 plus LPCM, WAV PCM, and ALAC. It already excludes AirPlay 2, MP3, AAC, FLAC, Opus, Vorbis, WMA, and DSD. A longer codec list is a new decision.
+
+### P-0028 Postern file URL
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [D-0039](decisions.md#d-0039-firmware-repos). The old ban, "do not give the submodule a network URL until a remote exists", no longer applies.
+- **Resolution:** The remote `https://github.com/oemaix/postern.git` exists. The submodule tracks branch `main` there. Do not replace that URL with an absolute local path.
+
+### P-0039 Tone stand-in
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [P-0001](#p-0001-spotify-on-the-esp32).
+- **Resolution:** The status title stays "Tone stand-in" until cspot is linked. That sentence now lives in [P-0001](#p-0001-spotify-on-the-esp32).
+
+### P-0047 Postern image
+
+- **Status:** Resolved
+- **Avoid:** Superseded by [D-0045](decisions.md#d-0045-postern-image). The old second sentence, "do not run `idf.py` inside `postern/components/postern`", is [Postern P-0030](../postern/docs/pitfalls.md#p-0030-reuse-directory) and stays in that repository.
+- **Resolution:** Do not add a Stamp Pico application in this repository. [D-0045](decisions.md#d-0045-postern-image) is that rule, stated here so a Porta checkout does not depend on opening Postern to know it. Postern's one-image rule is [Postern P-0034](../postern/docs/pitfalls.md#p-0034-one-image).

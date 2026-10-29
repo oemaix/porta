@@ -1,4 +1,4 @@
-# Not built yet. ESP-IDF 6.1 names, for the Core2's 16 MB flash and PSRAM.
+# ESP-IDF v5.5.6 names, for the Core2's 16 MB flash and PSRAM (D-0046).
 # Classic Bluetooth stays off. The microSD slot stays off.
 
 CONFIG_IDF_TARGET="esp32"

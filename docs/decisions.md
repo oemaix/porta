@@ -1,6 +1,6 @@
 # Decisions
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
 Ids are `D-xxxx`. They are not reused and not renumbered. A later change supersedes an id by pointing at a new one. Status is **Decided** or **Undecided**. A recommendation under an open id is not a decision.
 
@@ -28,14 +28,14 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0018](#d-0018-agent-shell) | Decided | Agent shell enters Porta, or Postern inside that submodule |
 | [D-0019](#d-0019-terminal-shell) | Decided | Default terminal is Porta; Postern is a second profile |
 | [D-0020](#d-0020-pitfall-record) | Decided | Pitfalls live in `docs/pitfalls.md` |
-| [D-0021](#d-0021-no-firmware-tree) | Decided | No application tree in phase 0 |
+| [D-0021](#d-0021-no-firmware-tree) | Decided | Superseded by D-0043 |
 | [D-0022](#d-0022-development-host) | Decided | Linux is the development host |
 | [D-0023](#d-0023-separate-phase-1-prototypes) | Decided | Phase 1 player and bridge stay separate |
-| [D-0024](#d-0024-editor-extensions) | Decided | Required extension list |
+| [D-0024](#d-0024-editor-extensions) | Decided | Required extensions, including rust-analyzer |
 | [D-0025](#d-0025-microsd-in-phase-1) | Decided | microSD is unused in phase 1 |
 | [D-0026](#d-0026-second-hmi-button) | Undecided | Side button index 3 |
 | [D-0027](#d-0027-microsd-purpose) | Undecided | Config store is a candidate; offline Spotify is not |
-| [D-0028](#d-0028-firmware-framework) | Decided | ESP-IDF v6.1 through EIM on this nixpkgs pin |
+| [D-0028](#d-0028-firmware-framework) | Decided | Superseded for the Core2 by D-0046; Postern stays on v6.1 |
 | [D-0029](#d-0029-spotify-transport) | Decided | Core2 is a Connect speaker via cspot |
 | [D-0030](#d-0030-login) | Undecided | Phase 1 login and the later easier login |
 | [D-0031](#d-0031-board-link) | Decided | I2C on GPIO32/33, I2S on GPIO14/13/26 |
@@ -53,6 +53,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0043](#d-0043-firmware-tree) | Decided | Core2 tree exists; tone stand-in; I2S still off |
 | [D-0044](#d-0044-python-out-of-the-flake) | Decided | No project Python in the flake; a later `.venv` uses `uv` |
 | [D-0045](#d-0045-postern-image) | Decided | The Postern submodule is the Stamp Pico image |
+| [D-0046](#d-0046-core2-language) | Decided | Core2 is Rust on ESP-IDF v5.5.6; Postern stays v6.1 |
 
 ## Decided
 
@@ -199,9 +200,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0021 No firmware tree
 
 - **Status:** Decided
-- **Choice:** Phase 0 does not add application source or a `firmware/` tree. The framework itself is [D-0028](#d-0028-firmware-framework).
+- **Choice:** Superseded by [D-0043](#d-0043-firmware-tree). The Core2 tree is `firmware/`.
+- **History:** Phase 0 added no application source and no `firmware/` tree. The framework named at that time was [D-0028](#d-0028-firmware-framework).
 - **Source:** Reasonable completion. An empty tree would imply a layout the firmware has not earned yet.
-- **Consequence:** The first firmware change includes the layout and supersedes this id's "no tree" clause. It does not reuse the id. That change is [D-0043](#d-0043-firmware-tree). The layout is [D-0042](#d-0042-core2-components).
+- **Consequence:** The layout is [D-0042](#d-0042-core2-components). The language and the ESP-IDF line are [D-0046](#d-0046-core2-language).
 
 ### D-0022 Development host
 
@@ -220,9 +222,9 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0024 Editor extensions
 
 - **Status:** Decided
-- **Choice:** The required extensions are `jnoortheen.nix-ide`, `editorconfig.editorconfig`, `DavidAnson.vscode-markdownlint`, `yzhang.markdown-all-in-one`, `ms-vscode.cpptools`, `ms-vscode.vscode-serial-monitor`, and `ms-python.python`.
-- **Source:** Reasonable completion from the skeleton: Nix, Markdown, EditorConfig, C or C++, serial logs, and Python.
-- **Consequence:** The Espressif VS Code extension stays off this list. The shell already provides `idf.py` ([D-0028](#d-0028-firmware-framework)). That extension installs a second copy and would fight it.
+- **Choice:** The required extensions are `jnoortheen.nix-ide`, `editorconfig.editorconfig`, `DavidAnson.vscode-markdownlint`, `yzhang.markdown-all-in-one`, `rust-lang.rust-analyzer`, `ms-vscode.cpptools`, `ms-vscode.vscode-serial-monitor`, and `ms-python.python`.
+- **Source:** Reasonable completion from the skeleton: Nix, Markdown, EditorConfig, Rust, C for Postern, serial logs, and Python. `rust-lang.rust-analyzer` was added with [D-0046](#d-0046-core2-language).
+- **Consequence:** The Espressif VS Code extension stays off this list. It would install a second copy of the chip tools and would fight Postern's `idf.py`. `ms-vscode.cpptools` stays because Postern is C and is edited from this checkout.
 
 ### D-0025 microSD in phase 1
 
@@ -234,9 +236,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0028 Firmware framework
 
 - **Status:** Decided
-- **Choice:** Both the Core2 and the Stamp Pico use ESP-IDF v6.1. One generation covers both. `idf.py` comes from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), the same shape as the [NixOS wiki ESP-IDF example](https://nixos.wiki/wiki/ESP-IDF). That flake is built with this repository's nixpkgs pin and installs the official tools through Espressif's Installation Manager. Arduino and PlatformIO are not used.
-- **Source:** Project decision, 2026-10-28, revised 2026-10-29. The Installation Manager documents Python 3.10, 3.11, 3.12, 3.13, and 3.14 ([prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html)). The wrapper passes Python 3.13 from nixpkgs 26.05 into that installer. The ESP-IDF release is v6.1.
-- **Consequence:** `nix develop` puts `idf.py` on `PATH`. The chip toolchain is not in the Nix store. The first `idf.py` run installs v6.1 for the `esp32` target under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out ([P-0020](pitfalls.md#p-0020-no-toolchain-yet)). `firmware/` is the Core2 project this shell builds. The Stamp Pico image is the Postern submodule ([D-0045](#d-0045-postern-image)).
+- **Choice:** Superseded for the Core2 by [D-0046](#d-0046-core2-language). The Stamp Pico image stays on ESP-IDF v6.1. Its shell is the Postern submodule, which provides `idf.py` from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), built with this nixpkgs pin, and installs the chip tools through Espressif's Installation Manager. Arduino and PlatformIO are not used. Postern records the same shell as [D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell).
+- **History:** The original choice put both chips on v6.1 and put `idf.py` in the Porta shell.
+- **Source:** Project decision, 2026-10-28, revised 2026-10-30. The Installation Manager documents Python 3.10, 3.11, 3.12, 3.13, and 3.14 ([prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html)). Postern's wrapper passes Python 3.13 from nixpkgs 26.05 into that installer.
+- **Consequence:** Postern's shell puts `idf.py` on `PATH` and installs the chip tools under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install), [Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace), [Postern P-0032](../postern/docs/pitfalls.md#p-0032-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out of either shell.
 
 ### D-0029 Spotify transport
 
@@ -257,11 +260,11 @@ Items marked as a reasonable completion were filled in during bootstrap because 
   | I2C SCL | GPIO33 | PORT.A white, M-Bus pin 20 | GPIO22 |
   | I2S BCLK | GPIO14 | PORT.C yellow, M-Bus pin 16 | GPIO18 |
   | I2S LRCK | GPIO13 | PORT.C white, M-Bus pin 15 | GPIO19 |
-  | I2S DOUT | GPIO26 | PORT.B yellow, M-Bus pin 10 | GPIO36 DIN |
+  | I2S DOUT | GPIO26 | PORT.B yellow, M-Bus pin 10 | GPIO26 DIN |
   | GND | — | Grove black | GND |
 
 - **Source:** The link type is a project decision, 2026-10-28. The pins are taken from the [Core2 v1.3 pin map](https://docs.m5stack.com/en/core/Core2_v1.3) and from the Grove colors on ExtPort For Core2. Module HMI brings PORT.B and PORT.C out of the stack. PORT.A passes through on M-Bus pins 19 and 20.
-- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. Core2 GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Stamp Pico GPIO36 is a different pin and is the cable's data input. Stamp Pico GPIO26 stays free for a later return path and is not wired. Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is `0x1D` (Postern [D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md). The Stamp Pico side is Postern [D-0017](../postern/docs/decisions.md#d-0017-reference-pins).
+- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. Core2 GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Stamp Pico GPIO26 is the cable's data input. Stamp Pico GPIO36 stays free for a later return path and is not wired. It is input-only, so it cannot drive that path (Postern [P-0020](../postern/docs/pitfalls.md#p-0020-input-only-gpio36)). Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is `0x1D` (Postern [D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). Pull-ups, levels, and the 100 kHz controller clock are the [Postern cable note](../postern/docs/cable.md). Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md). The Stamp Pico side is Postern [D-0017](../postern/docs/decisions.md#d-0017-reference-pins).
 
 ### D-0032 I2S format
 
@@ -303,8 +306,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0039 Firmware repos
 
 - **Status:** Decided
-- **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is `https://github.com/oemaix/postern.git`, branch `main`. Another project builds that component into its own application and flashes that image.
-- **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`components/postern/include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
+- **Choice:** The Core2 application lives in this repo. The Stamp Pico image is the [Postern](../postern/README.md) submodule, `https://github.com/oemaix/postern.git`, branch `main`. Another project reuses the component `components/postern` and does not flash a second copy of that image ([D-0045](#d-0045-postern-image)).
+- **Shared surface:** The cable contract lives in Postern ([cable](../postern/docs/cable.md)). I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`components/postern/include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is `0x1D` ([Postern D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
 - **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
 - **Consequence:** The Core2 tree is [D-0043](#d-0043-firmware-tree). The sentence that another project flashes the Stamp Pico image is superseded by [D-0045](#d-0045-postern-image). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
 
@@ -325,23 +328,25 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0043 Firmware tree
 
 - **Status:** Decided
-- **Choice:** The Core2 application is `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in the header-only component `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. Hardware I2S and Wi-Fi stay off. `idf.py` is provided by [D-0028](#d-0028-firmware-framework). Linking still does not start the codec.
-- **Source:** Phase 1 implementation, 2026-10-29. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
-- **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0039](pitfalls.md#p-0039-tone-stand-in)). The codec stays off until the rail is measured ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
+- **Choice:** The Core2 application is the Rust crate `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes may use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. `Board::limit_measured` stays false until that number is written down. A false flag does not forbid Wi-Fi or I2S ([P-0040](pitfalls.md#p-0040-unmeasured-rail)). Linking cspot still does not start the codec by itself.
+- **History:** The first tree was C, with a header-only `seam`, and `idf.py` came from [D-0028](#d-0028-firmware-framework). [D-0046](#d-0046-core2-language) superseded that build.
+- **Source:** Phase 1 implementation, 2026-10-29, revised 2026-10-30. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
+- **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). Wi-Fi and I2S may start before the rail is measured. That is not the stable path. A guessed limit is not written into the tree ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
 
 ### D-0040 Python
 
 - **Status:** Decided
-- **Choice:** The project interpreter is the flake's `python314` and the standard library. `uv` is already in the shell. A gitignored `.venv` is created with `uv` on the day a third-party package is imported. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
+- **Choice:** Superseded by [D-0044](#d-0044-python-out-of-the-flake).
+- **History:** The flake carried `python314` and `uv`. A gitignored `.venv` was created with `uv` on the day a third-party package was imported. `pip` was not used.
 - **Source:** Project question, 2026-10-28, decided 2026-10-29.
-- **Consequence:** Superseded by [D-0044](#d-0044-python-out-of-the-flake). The flake no longer carries `python314` or `uv`. [P-0029](pitfalls.md#p-0029-pip) still forbids `pip`.
+- **Consequence:** The flake no longer carries `python314` or `uv`. [P-0029](pitfalls.md#p-0029-pip) still forbids `pip`.
 
 ### D-0044 Python out of the flake
 
 - **Status:** Decided
-- **Choice:** The Porta flake does not carry a Python interpreter, `uv`, or `pip`. This supersedes [D-0040](#d-0040-python). Nothing in this repository imports a third-party Python package, so that ecosystem stays out of `flake.nix` until a Porta script must use it. On that day a gitignored `.venv` is created with `uv`. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
-- **Source:** Project decision, 2026-10-29. `python314` and `uv` left the flake because this repository does not call them.
-- **Consequence:** `nix develop` does not put `python3` on `PATH`. `idf.py` still uses Python 3.13 from this nixpkgs pin, inside `~/.espressif`, and that tree is not a project interpreter ([D-0028](#d-0028-firmware-framework)). The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy as [D-0019](../postern/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
+- **Choice:** The Porta flake does not carry a Python interpreter, `uv`, or `pip` for the hooks or for a project `.venv`. This supersedes [D-0040](#d-0040-python). Nothing in this repository imports a third-party Python package, so that ecosystem stays out of `flake.nix` until a Porta script must use it. On that day a gitignored `.venv` is created with `uv`. `pip` is not used. The Python inside an ESP-IDF install is not a project interpreter and is not this ban. A flake package added because the Core2 image target needs it is not this ban either.
+- **Source:** Project decision, 2026-10-29, revised 2026-10-30. `python314` and `uv` left the flake because this repository does not call them. The image build's Python is a later, separate need.
+- **Consequence:** `nix develop` does not put `python3` on `PATH` today. The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy for its own flake as [D-0019](../postern/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
 
 ### D-0045 Postern image
 
@@ -349,6 +354,13 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** The Stamp Pico image is the Postern repository, pinned as the submodule `postern`. That repository is developed on its own and flashed with its own `idf.py`. The reusable part is the component `components/postern`. Another product sets `EXTRA_COMPONENT_DIRS` to that directory. This supersedes the sentence in [D-0039](#d-0039-firmware-repos) that another project flashes the image.
 - **Source:** Project decision, 2026-10-30. The Stamp Pico firmware is one image with one repository. Porta keeps the Core2 image in `firmware/`.
 - **Consequence:** Do not add a Stamp Pico application in this repository ([P-0047](pitfalls.md#p-0047-postern-image)). `firmware/` stays the Core2 image ([D-0043](#d-0043-firmware-tree)). Build and flash Postern from the Postern devshell, in `postern/`. Postern records the image as [D-0021](../postern/docs/decisions.md#d-0021-image) and the shell as [D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell).
+
+### D-0046 Core2 language
+
+- **Status:** Decided
+- **Choice:** The Core2 application in `firmware/` is Rust on ESP-IDF v5.5.6, through `esp-idf-svc` 0.53 and the `esp-idf-hal` and `esp-idf-sys` crates it re-exports. There is no ESP-IDF 5.6 release. v5.5.6 is the current bugfix on the 5.5 line. This supersedes the Core2 half of [D-0028](#d-0028-firmware-framework) and the `idf.py` sentence in [D-0043](#d-0043-firmware-tree). The Stamp Pico image stays C and ESP-IDF v6.1 in the Postern submodule. Arduino, PlatformIO, an esp-hal bare-metal image, and an ESP-IDF Nix flake pinned to an older nixpkgs stay out. cspot remains the Connect library when it is linked. It is not linked yet.
+- **Source:** Project decision, 2026-10-30. The Rust crates' CI builds ESP-IDF v5.5.3 and does not build v6.1. v5.5.6 is that line's current bugfix, and the line is supported through January 2028. The cspot fork named in [D-0029](#d-0029-spotify-transport) is maintained against IDF 5.5.
+- **Consequence:** The phase 1 modules and the tone stand-in keep their behaviour. `cargo test` in `firmware/` is the host check. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). The image target is `xtensa-esp32-espidf`. The Porta shell provides `cargo` and `rustc` for that host check. It does not yet provide the Xtensa ESP-IDF Rust target or an ESP-IDF v5.5.6 tree; that gap is [roadmap](roadmap.md) status and is not a ban on adding them. `idf.py` leaves the Porta shell. Postern's shell still provides it for v6.1. The editor list includes `rust-lang.rust-analyzer` ([D-0024](#d-0024-editor-extensions)). `ms-vscode.cpptools` stays for Postern.
 
 ## Undecided
 

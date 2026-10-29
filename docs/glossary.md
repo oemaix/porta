@@ -1,6 +1,6 @@
 # Glossary
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
 | Term | Meaning |
 | --- | --- |
@@ -13,7 +13,7 @@ Status: baseline · 2026-10-29
 | M5Stamp Pico | Separate ESP32-PICO-D4 board used only as a Bluetooth audio transmitter. No PSRAM. |
 | Module Proto | Prototyping module that carries the wiring for the Stamp Pico. |
 | M5-Bus | The 30-pin stack bus between the Core2 and its modules. |
-| I2S | The digital audio link between the Core2, Module Audio, and the Stamp Pico. Format is [D-0032](decisions.md#d-0032-i2s-format). |
+| I2S | The digital audio link between the Core2, Module Audio, and the Stamp Pico. Format is [D-0032](decisions.md#d-0032-i2s-format). Wiring is the [Postern cable note](../postern/docs/cable.md). |
 | AirPlay 1 | RAOP. The sender is a phone or a computer. The audio codec is ALAC ([D-0036](decisions.md#d-0036-airplay-and-dlna)). |
 | DLNA renderer | A player that fetches a URI a controller sets. Codecs are LPCM, WAV PCM, and ALAC ([D-0036](decisions.md#d-0036-airplay-and-dlna)). |
 | Spotify Connect | The session in which the Core2 fetches and plays a track while a phone only chooses the music ([D-0029](decisions.md#d-0029-spotify-transport)). |

@@ -4,8 +4,8 @@
 # Cursor agent state. People who do not use Cursor can ignore this tree.
 /.cursor/
 
-# ESP-IDF outputs. The application sources stay tracked.
-/firmware/build/
+# Core2 build outputs. The Rust sources stay tracked.
+/firmware/target/
 /firmware/sdkconfig
 /firmware/sdkconfig.old
 /firmware/managed_components/

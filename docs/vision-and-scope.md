@@ -6,7 +6,7 @@ Status: baseline · 2026-10-29
 
 Porta should feel like a single-purpose player, not like a development kit. The listener moves through a few color-block screens with a wheel, confirms with a press, and backs out with one button. Playback, a line-in bridge, and a network receiver are modes of that same object.
 
-The Blackberry 7290 and 8100 are the reference for the wheel grammar only. They are not a visual target ([D-0011](decisions.md#d-0011-visual-language), [P-0021](pitfalls.md#p-0021-blackberry-pixels)).
+The Blackberry 7290 and 8100 are the reference for the wheel grammar only. They are not a visual target ([D-0011](decisions.md#d-0011-visual-language)).
 
 ## In scope
 
@@ -29,4 +29,4 @@ Phase 1 proves the two hard paths separately and puts a usable UI on the Core2. 
 
 ## Non-goals for the skeleton
 
-The firmware framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The Core2 application is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+The Core2 application is Rust on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). The Stamp Pico image stays C on ESP-IDF v6.1 in the Postern submodule.

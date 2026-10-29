@@ -22,7 +22,7 @@ Touch targets sit inside the panel. The Core2's edges can report touch poorly ([
 
 Screens are stacks of flat blocks: a title, a focused block, and a short list. Type is large. One block is focused. The focused block is the thing Activate will run.
 
-The look is not a Blackberry skin and not a desktop port ([P-0021](pitfalls.md#p-0021-blackberry-pixels)). The palette is not decided. Prototypes may use the interim values in [D-0035](decisions.md#d-0035-palette) and must be able to drop them.
+The look is not a Blackberry skin and not a desktop port ([D-0011](decisions.md#d-0011-visual-language)). The palette is not decided. Prototypes may use the interim values in [D-0035](decisions.md#d-0035-palette) and must be able to drop them.
 
 ## Phase 1 screens
 

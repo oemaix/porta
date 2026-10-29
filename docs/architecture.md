@@ -1,8 +1,8 @@
 # Architecture
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
-Porta is two controllers. The Core2 v1.3 owns the UI, Wi-Fi, and the analog codec. The M5Stamp Pico owns Bluetooth transmission. They are not on the same module stack. The Stamp Pico sits on a Module Proto and is cabled to the Core2. The cable is [D-0031](decisions.md#d-0031-board-link).
+Porta is two controllers. The Core2 v1.3 owns the UI, Wi-Fi, and the analog codec. The M5Stamp Pico owns Bluetooth transmission. They are not on the same module stack. The Stamp Pico sits on a Module Proto and is cabled to the Core2. The cable is [D-0031](decisions.md#d-0031-board-link). Levels, pull-ups, and the controller clock are the [Postern cable note](../postern/docs/cable.md).
 
 ```mermaid
 flowchart LR
@@ -76,7 +76,7 @@ The ESP32 GPIO matrix can route I2S0 or I2S1 to other output-capable pins. Input
 
 Leave these alone when adding a second audio port: GPIO0, GPIO2, GPIO12, and GPIO34 (codec), GPIO21 and GPIO22 (internal I2C), GPIO18, GPIO23, GPIO38, GPIO5, GPIO15, and GPIO4 (LCD and microSD), GPIO1 and GPIO3 (USB download), GPIO39 (touch interrupt). GPIO25 is the LED data pin on M5GO Bottom2.
 
-Pins that remain usable for another I2S are GPIO13, GPIO14, GPIO19, GPIO26, and GPIO27. GPIO32 and GPIO33 can also carry I2S, and this design uses them for the external I2C instead. The cable is [D-0031](decisions.md#d-0031-board-link): I2S1 on Core2 GPIO14, GPIO13, and GPIO26, master on the Core2, data toward the Stamp Pico only. The Stamp Pico receives that data on GPIO36, with the clocks on GPIO18 and GPIO19. Those numbers are not the Core2 numbers.
+Pins that remain usable for another I2S are GPIO13, GPIO14, GPIO19, GPIO26, and GPIO27. GPIO32 and GPIO33 can also carry I2S, and this design uses them for the external I2C instead. The cable is [D-0031](decisions.md#d-0031-board-link): I2S1 on Core2 GPIO14, GPIO13, and GPIO26, master on the Core2, data toward the Stamp Pico only. The Stamp Pico receives that data on GPIO26, with the clocks on GPIO18 and GPIO19. The clock numbers are not the Core2 numbers. The data wire is GPIO26 on both chips.
 
 Module Audio's configuration A is the Core2 setting. Its bus drawing places I2S on pins 21–26, which on this host are GPIO27, GPIO19, GPIO2, GPIO0, and GPIO34. Confirm the module's switch before driving those pins. Do not enable the NS4168 at the same time ([P-0006](pitfalls.md#p-0006-internal-i2s)).
 
@@ -92,4 +92,4 @@ Stacking modules requires the Core2 battery bottom to come off. M5 documents tha
 
 ## Software boundary
 
-The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework)). Its components are [software](software.md) ([D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). `idf.py` is in the development shell. The Stamp Pico image is the Postern submodule. Its bridge component is `postern/components/postern`, and its pins are compile-time Kconfig on that chip ([D-0045](decisions.md#d-0045-postern-image)). See [operations](operations.md).
+The Core2 application is one Rust image on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). Its components are [software](software.md) ([D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). The Stamp Pico image is the Postern submodule and stays C on ESP-IDF v6.1. Its bridge component is `postern/components/postern`, and its pins are compile-time Kconfig on that chip ([D-0045](decisions.md#d-0045-postern-image)). See [operations](operations.md).
