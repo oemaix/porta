@@ -46,12 +46,13 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0036](#d-0036-airplay-and-dlna) | Decided | AirPlay 1 and a short DLNA codec list |
 | [D-0037](#d-0037-license) | Decided | Apache License 2.0 |
 | [D-0038](#d-0038-enclosure-and-approvals) | Decided | The stack is the enclosure; no approvals |
-| [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
+| [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern submodule is the Stamp Pico image |
 | [D-0040](#d-0040-python) | Decided | Superseded by D-0044 |
 | [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
 | [D-0042](#d-0042-core2-components) | Decided | Core2 image: panel, player, and sink |
 | [D-0043](#d-0043-firmware-tree) | Decided | Core2 tree exists; tone stand-in; I2S still off |
 | [D-0044](#d-0044-python-out-of-the-flake) | Decided | No project Python in the flake; a later `.venv` uses `uv` |
+| [D-0045](#d-0045-postern-image) | Decided | The Postern submodule is the Stamp Pico image |
 
 ## Decided
 
@@ -235,7 +236,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** Both the Core2 and the Stamp Pico use ESP-IDF v6.1. One generation covers both. `idf.py` comes from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), the same shape as the [NixOS wiki ESP-IDF example](https://nixos.wiki/wiki/ESP-IDF). That flake is built with this repository's nixpkgs pin and installs the official tools through Espressif's Installation Manager. Arduino and PlatformIO are not used.
 - **Source:** Project decision, 2026-10-28, revised 2026-10-29. The Installation Manager documents Python 3.10, 3.11, 3.12, 3.13, and 3.14 ([prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html)). The wrapper passes Python 3.13 from nixpkgs 26.05 into that installer. The ESP-IDF release is v6.1.
-- **Consequence:** `nix develop` puts `idf.py` on `PATH`. The chip toolchain is not in the Nix store. The first `idf.py` run installs v6.1 for the `esp32` target under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out ([P-0020](pitfalls.md#p-0020-no-toolchain-yet)). `firmware/` is the Core2 project this shell builds. The Stamp Pico image is still produced by the project that consumes Postern ([D-0039](#d-0039-firmware-repos)).
+- **Consequence:** `nix develop` puts `idf.py` on `PATH`. The chip toolchain is not in the Nix store. The first `idf.py` run installs v6.1 for the `esp32` target under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out ([P-0020](pitfalls.md#p-0020-no-toolchain-yet)). `firmware/` is the Core2 project this shell builds. The Stamp Pico image is the Postern submodule ([D-0045](#d-0045-postern-image)).
 
 ### D-0029 Spotify transport
 
@@ -303,9 +304,9 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 
 - **Status:** Decided
 - **Choice:** The Core2 application lives in this repo when firmware work starts. The Stamp Pico bridge is the ESP-IDF component [Postern](../postern/README.md), pinned as the submodule `postern`. Its URL is `https://github.com/oemaix/postern.git`, branch `main`. Another project builds that component into its own application and flashes that image.
-- **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
+- **Shared surface:** The cable contract lives in Postern. I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`components/postern/include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is still open. GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
 - **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
-- **Consequence:** The Core2 tree is [D-0043](#d-0043-firmware-tree). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
+- **Consequence:** The Core2 tree is [D-0043](#d-0043-firmware-tree). The sentence that another project flashes the Stamp Pico image is superseded by [D-0045](#d-0045-postern-image). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
 
 ### D-0041 Devcontainer host
 
@@ -341,6 +342,13 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** The Porta flake does not carry a Python interpreter, `uv`, or `pip`. This supersedes [D-0040](#d-0040-python). Nothing in this repository imports a third-party Python package, so that ecosystem stays out of `flake.nix` until a Porta script must use it. On that day a gitignored `.venv` is created with `uv`. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
 - **Source:** Project decision, 2026-10-29. `python314` and `uv` left the flake because this repository does not call them.
 - **Consequence:** `nix develop` does not put `python3` on `PATH`. `idf.py` still uses Python 3.13 from this nixpkgs pin, inside `~/.espressif`, and that tree is not a project interpreter ([D-0028](#d-0028-firmware-framework)). The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy as [D-0019](../postern/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
+
+### D-0045 Postern image
+
+- **Status:** Decided
+- **Choice:** The Stamp Pico image is the Postern repository, pinned as the submodule `postern`. That repository is developed on its own and flashed with its own `idf.py`. The reusable part is the component `components/postern`. Another product sets `EXTRA_COMPONENT_DIRS` to that directory. This supersedes the sentence in [D-0039](#d-0039-firmware-repos) that another project flashes the image.
+- **Source:** Project decision, 2026-10-30. The Stamp Pico firmware is one image with one repository. Porta keeps the Core2 image in `firmware/`.
+- **Consequence:** Do not add a Stamp Pico application in this repository ([P-0047](pitfalls.md#p-0047-postern-image)). `firmware/` stays the Core2 image ([D-0043](#d-0043-firmware-tree)). Build and flash Postern from the Postern devshell, in `postern/`. Postern records the image as [D-0021](../postern/docs/decisions.md#d-0021-image) and the shell as [D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell).
 
 ## Undecided
 

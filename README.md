@@ -39,7 +39,7 @@ The default terminal profile **Nix Develop** runs the same shell, using zsh when
 README.md
 docs/                  specification
 firmware/              Core2 application, built with idf.py
-postern/               I2S-to-Bluetooth component submodule
+postern/               Stamp Pico firmware submodule, built with its own idf.py
 flake.nix              development shell
 .devcontainer/         optional Ubuntu LTS + Nix
 .vscode/               terminal profile and required extensions
@@ -47,4 +47,4 @@ flake.nix              development shell
 tmp/                   local design scratch (not tracked)
 ```
 
-The firmware framework is ESP-IDF v6.1 ([D-0028](docs/decisions.md#d-0028-firmware-framework)). The Core2 application is [firmware/](firmware/README.md) and builds with `idf.py` from this shell ([D-0043](docs/decisions.md#d-0043-firmware-tree)). Postern is the bridge component ([D-0039](docs/decisions.md#d-0039-firmware-repos)). The license is Apache 2.0.
+The firmware framework is ESP-IDF v6.1 ([D-0028](docs/decisions.md#d-0028-firmware-framework)). The Core2 application is [firmware/](firmware/README.md) and builds with `idf.py` from this shell ([D-0043](docs/decisions.md#d-0043-firmware-tree)). Postern is the Stamp Pico image, in the submodule, with its own shell ([D-0045](docs/decisions.md#d-0045-postern-image)). The license is Apache 2.0.

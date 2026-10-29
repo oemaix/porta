@@ -60,7 +60,14 @@ The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later 
 
 ## Postern
 
-`postern/` is a submodule of `https://github.com/oemaix/postern.git`, branch `main` ([D-0039](decisions.md#d-0039-firmware-repos)).
+`postern/` is the Stamp Pico image, a submodule of `https://github.com/oemaix/postern.git`, branch `main` ([D-0045](decisions.md#d-0045-postern-image)). Build it from the Postern devshell, in that directory. The profile **Postern** enters that shell.
+
+```sh
+idf.py set-target esp32
+idf.py build
+```
+
+`firmware/` stays the Core2 image. Do not add a second Stamp Pico tree here ([P-0047](pitfalls.md#p-0047-postern-image)).
 
 ## Devcontainer
 

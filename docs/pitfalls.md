@@ -278,6 +278,18 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite the activation script to one absolute path. Do not drop the host bind because `idf.py` already worked in the container.
 - **Why:** Espressif's installer writes absolute paths into `activate_idf_v6.1.sh` and the virtualenv shebangs. In the devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind mount stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, `idf-use` does not find `idf.py`, and the command prints `could not set up v6.1`. A snapshot taken while those paths are missing caches an empty `ESP_IDF_VERSION`, and a later run keeps the empty value. The devshell puts wrappers ahead of `idf.py` and the other Installation Manager commands. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command and deletes the empty snapshot so the next run records `6.1`. The container already has `/root/.espressif`, so the wrapper runs the real command there.
 
+### P-0046 LCD rail and the microSD slot
+
+- **Status:** Open
+- **Avoid:** Do not mount the microSD card because the panel rail is on. Do not turn that rail off to keep the slot dark. Do not drive GPIO4 low while the panel is using the shared SPI bus.
+- **Why:** ILI9342C logic power is AXP192 LDO2, and that rail also feeds the microSD slot. The backlight is DCDC3. LCD reset is AXP GPIO4. ESP32 GPIO4 is the card chip-select, a different pin ([architecture](architecture.md)). Phase 1 does not mount the card ([D-0025](decisions.md#d-0025-microsd-in-phase-1)). The panel code holds GPIO4 high so the slot ignores the bus.
+
+### P-0047 Postern image
+
+- **Status:** Open
+- **Avoid:** Do not add a Stamp Pico application in this repository. Do not run `idf.py` inside `postern/components/postern`.
+- **Why:** The Stamp Pico image is the Postern submodule ([D-0045](decisions.md#d-0045-postern-image)). `idf.py build` runs at `postern/`, in the Postern devshell. `firmware/` is the Core2 image ([D-0043](decisions.md#d-0043-firmware-tree)). The reusable component is `postern/components/postern`. Pointing `EXTRA_COMPONENT_DIRS` at the Postern repository root treats that project file as a component ([Postern P-0030](../postern/docs/pitfalls.md#p-0030-reuse-directory)).
+
 ## Resolved
 
-[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. [P-0043](#p-0043-serial-device-node) records the host serial node the container receives. The text stays above so the ids are not reused.
+[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. [P-0043](#p-0043-serial-device-node) records the host serial node the container receives. [P-0047](#p-0047-postern-image) keeps the Stamp Pico image in the Postern submodule. The text stays above so the ids are not reused.

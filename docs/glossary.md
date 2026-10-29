@@ -20,7 +20,7 @@ Status: baseline · 2026-10-29
 | cspot | The C++ library that implements that session on the Core2. Use the philippe44 fork, not the last upstream snapshot ([P-0026](pitfalls.md#p-0026-cspot-fork)). |
 | Player command | play, pause, next, previous, or set volume. Sent by `ui` to `player` ([D-0042](decisions.md#d-0042-core2-components)). |
 | Status snapshot | Fixed-size record `ui` reads: title, transport, volume, session ready, and Wi-Fi. PCM is not in it. |
-| Postern | The ESP-IDF component that sends I2S audio to Bluetooth. It is the `postern` submodule ([D-0039](decisions.md#d-0039-firmware-repos)). |
+| Postern | The Stamp Pico firmware. It is the `postern` submodule, developed on its own. The reusable bridge is `postern/components/postern` ([D-0045](decisions.md#d-0045-postern-image)). |
 | A2DP | Bluetooth profile used to send audio to headphones. |
 | AAC / SBC | Codecs for that Bluetooth link. AAC is the goal. SBC is the fallback that must work first ([D-0007](decisions.md#d-0007-bluetooth-transmitter)). |
 | Auxiliary mode | Phase 2 product mode that exposes the audio-bridge jobs inside the same UI. |

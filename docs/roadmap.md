@@ -16,7 +16,7 @@ Status: baseline · 2026-10-29
 
 From the design notes, kept as two prototypes ([D-0023](decisions.md#d-0023-separate-phase-1-prototypes)):
 
-- M5Stamp Pico audio bridge: the Postern component, I2S in, Bluetooth out, AAC with an SBC fallback ([D-0039](decisions.md#d-0039-firmware-repos)). The component encodes AAC-LC and falls back to SBC. It has not been run on a board.
+- M5Stamp Pico audio bridge: the Postern image, I2S in, Bluetooth out, AAC with an SBC fallback ([D-0045](decisions.md#d-0045-postern-image)). The component encodes AAC-LC and falls back to SBC. It has not been run on a board.
 - Spotify Connect player on Core2 v1.3: the Core2 fetches the track and plays it to I2S ([D-0029](decisions.md#d-0029-spotify-transport)).
 - A simple UI that is complete enough to use, built on an API that can carry later screens.
 - Module HMI working for focus, confirm, and back.

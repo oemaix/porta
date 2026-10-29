@@ -51,7 +51,7 @@ Vendor descriptions used for the identification:
 
 **Phase 1 player.** The Core2 is a Spotify Connect speaker ([D-0029](decisions.md#d-0029-spotify-transport)). cspot fetches the track over Wi-Fi, decodes it to PCM, and a Porta I2S sink clocks that PCM into Module Audio. Play, pause, and skip call the same session. The internal NS4168 speaker and SPM1423 microphone are not the product output. They share the codec pins and must be disabled ([P-0006](pitfalls.md#p-0006-internal-i2s)).
 
-**Phase 1 bridge.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. The Postern component offers AAC-LC and falls back to SBC. SBC is the session that has to pass on the board before AAC is treated as done ([P-0003](pitfalls.md#p-0003-no-psram), [P-0024](pitfalls.md#p-0024-aac-source)).
+**Phase 1 bridge.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. That image is the Postern submodule. It offers AAC-LC and falls back to SBC. SBC is the session that has to pass on the board before AAC is treated as done ([P-0003](pitfalls.md#p-0003-no-psram), [P-0024](pitfalls.md#p-0024-aac-source), [D-0045](decisions.md#d-0045-postern-image)).
 
 **Phase 2 line bridge.** The ES8388 ADC captures the TRS jack. Samples reach the Stamp Pico by the link in [D-0031](decisions.md#d-0031-board-link).
 
@@ -92,4 +92,4 @@ Stacking modules requires the Core2 battery bottom to come off. M5 documents tha
 
 ## Software boundary
 
-The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework)). Its components are [software](software.md) ([D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). `idf.py` is in the development shell. The Stamp Pico bridge is the Postern submodule, an ESP-IDF component whose pins are compile-time Kconfig on that chip ([D-0039](decisions.md#d-0039-firmware-repos)). See [operations](operations.md).
+The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework)). Its components are [software](software.md) ([D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). `idf.py` is in the development shell. The Stamp Pico image is the Postern submodule. Its bridge component is `postern/components/postern`, and its pins are compile-time Kconfig on that chip ([D-0045](decisions.md#d-0045-postern-image)). See [operations](operations.md).
