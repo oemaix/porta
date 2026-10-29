@@ -210,7 +210,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not start the interactive devshell zsh with no startup file.
-- **Why:** Nix's zsh loads `zsh/newuser` when `.zshrc` is missing. As uid 0 that installer returns 1, so a following `exit` closes the terminal with status 1. The default prompt is `%m%#`, the container hostname and `#`. Each devshell sets `ZDOTDIR` to `shell/`, whose `.zshrc` shows the working directory and ends successfully.
+- **Why:** Nix's zsh loads `zsh/newuser` when `.zshrc` is missing. As uid 0 that installer returns 1, so a following `exit` closes the terminal with status 1. The default prompt is `%m%#`, the container hostname and `#`. Each devshell sets `ZDOTDIR` to `shell/`, whose `.zshrc` shows the working directory and ends successfully. A NixOS host still sources `/etc/zshrc` after that. That file installs `command_not_found_handler`, and the handler returns 127. The devcontainer image does not have this rc. `shell/.zshenv` turns global rc files off, so a following `exit` is not that status. `/etc/zshenv` still runs. The devshell also sets `SHELL` to its own zsh. Nix's setup would otherwise leave `SHELL` as the non-interactive bash from the build environment.
 
 ### P-0035 One devcontainer for every host
 
@@ -271,6 +271,12 @@ Agents read this file before design or implementation work, and they add to it w
 - **Status:** Open
 - **Avoid:** Do not add `python3`, `python314`, `uv`, or `pip` to the Porta flake until a Porta script must import a third-party package. Do not treat the agent hooks or `idf.py` as that need.
 - **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). `python314` and `uv` left the flake because this repository does not import them. `idf.py` keeps Python 3.13 inside `~/.espressif`. The hooks are standard-library scripts started by the host `python3`. When a third-party import arrives, add `uv` and create a gitignored `.venv` with it. `pip` stays out ([P-0029](#p-0029-pip)).
+
+### P-0045 ESP-IDF install home
+
+- **Status:** Open
+- **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite the activation script to one absolute path. Do not drop the host bind because `idf.py` already worked in the container.
+- **Why:** Espressif's installer writes absolute paths into `activate_idf_v6.1.sh` and the virtualenv shebangs. In the devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind mount stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, `idf-use` does not find `idf.py`, and the command prints `could not set up v6.1`. A snapshot taken while those paths are missing caches an empty `ESP_IDF_VERSION`, and a later run keeps the empty value. The devshell puts wrappers ahead of `idf.py` and the other Installation Manager commands. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command and deletes the empty snapshot so the next run records `6.1`. The container already has `/root/.espressif`, so the wrapper runs the real command there.
 
 ## Resolved
 

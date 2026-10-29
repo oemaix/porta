@@ -56,7 +56,7 @@ idf.py set-target esp32
 idf.py build
 ```
 
-The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later commands reuse that install. `idf.py` enters that install through bubblewrap and needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). Flash with `idf.py -p` and the port chosen at that moment. This page does not name a port, a baud rate, or an offset.
+The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later commands reuse that install. `idf.py` enters that install through bubblewrap and needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host, where that prefix is missing, the shell binds the login user's tree there for the ESP-IDF commands ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). Flash with `idf.py -p` and the port chosen at that moment. This page does not name a port, a baud rate, or an offset.
 
 ## Postern
 
@@ -77,7 +77,7 @@ Reopen in Container asks which config to use ([D-0041](decisions.md#d-0041-devco
 
 ## Terminal
 
-`.vscode/settings.json` defines the profile **Nix Develop** as `nix develop` for this repo with `--command zsh`, and selects it as the default on Linux and macOS ([D-0019](decisions.md#d-0019-terminal-shell)). The profile **Postern** is the same command for the Postern flake. zsh is a devshell package. The image does not install it. The prompt is the working directory, then `#` as root and `%` otherwise ([P-0034](pitfalls.md#p-0034-zsh-exit-status)). Those profiles are the terminal menu on the host and in the container. The image puts `/usr/local/bin` first on `PATH`, so `nix` there is the client copied into the image. The two `devcontainer.json` files do not repeat the profiles. Open them from the terminal profile menu. They are not top-level commands. The extension list in both configs is the same list as `.vscode/extensions.json`.
+`.vscode/settings.json` defines the profile **Nix Develop** as `nix develop` for this repo with `--command zsh`, and selects it as the default on Linux and macOS ([D-0019](decisions.md#d-0019-terminal-shell)). The profile **Postern** is the same command for the Postern flake. zsh is a devshell package. The image does not install it. The prompt is the working directory, then `#` as root and `%` otherwise. The devshell does not load the host's global zshrc ([P-0034](pitfalls.md#p-0034-zsh-exit-status)). Those profiles are the terminal menu on the host and in the container. The image puts `/usr/local/bin` first on `PATH`, so `nix` there is the client copied into the image. The two `devcontainer.json` files do not repeat the profiles. Open them from the terminal profile menu. They are not top-level commands. The extension list in both configs is the same list as `.vscode/extensions.json`.
 
 ## Required extensions
 
