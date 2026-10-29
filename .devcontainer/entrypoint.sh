@@ -94,31 +94,73 @@ align_vscode() {
   note "vscode is $(id -u vscode):$(id -g vscode); ${ws} is ${owner_uid}:${owner_gid}."
 }
 
-# A --device bind keeps the host owner. That uid is outside this
-# container's map, so the node shows up as 65534 and is not readable
-# (P-0043). A node created here is owned by this container.
-make_serial() {
-  local path="/dev/$1" major="$2" minor="$3" owner=""
-  if [ -e "${path}" ]; then
-    owner=$(stat -c %u "${path}" 2>/dev/null || true)
-    if [ "${owner}" = "0" ]; then
-      return 0
-    fi
-    rm -f "${path}" 2>/dev/null || true
-    if [ -e "${path}" ]; then
-      note "${path} is owned by uid ${owner} and cannot be replaced."
-      return 0
-    fi
-  fi
-  if ! mknod "${path}" c "${major}" "${minor}"; then
-    note "mknod ${path} failed."
-    return 0
-  fi
-  chown root:dialout "${path}" || note "chown ${path} failed."
-  chmod 660 "${path}" || note "chmod ${path} failed."
+# mknod is rejected in the rootless user namespace (P-0043). The host
+# devtmpfs is mounted at /host-dev. Scan it for every ttyUSBn and
+# ttyACMn, including a cable plugged in after the IDE starts. Do not
+# open those nodes here: open toggles modem lines and resets the board.
+is_serial_name() {
+  case "$1" in
+    ttyUSB*[!0-9]*|ttyACM*[!0-9]*) return 1 ;;
+    ttyUSB[0-9]*|ttyACM[0-9]*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
-make_serial ttyUSB0 188 0
-make_serial ttyACM0 166 0
+
+sync_serial() {
+  local name path host target
+  if [ ! -d /host-dev ]; then
+    return 1
+  fi
+  for host in /host-dev/ttyUSB* /host-dev/ttyACM*; do
+    [ -c "${host}" ] || continue
+    name=${host##*/}
+    is_serial_name "${name}" || continue
+    path="/dev/${name}"
+    if [ -L "${path}" ] && [ "$(readlink "${path}")" = "${host}" ]; then
+      continue
+    fi
+    if [ -e "${path}" ] && [ ! -L "${path}" ]; then
+      rm -f "${path}" 2>/dev/null || true
+      if [ -e "${path}" ]; then
+        if [ ! -e "/run/porta-serial-skip-${name}" ]; then
+          note "${path} is a mount and was left in place."
+          touch "/run/porta-serial-skip-${name}"
+        fi
+        continue
+      fi
+    fi
+    if ln -sfn "${host}" "${path}"; then
+      note "linked ${path}"
+    else
+      note "ln ${path} failed."
+    fi
+  done
+  for path in /dev/ttyUSB* /dev/ttyACM*; do
+    [ -L "${path}" ] || continue
+    target=$(readlink "${path}") || continue
+    case "${target}" in
+      /host-dev/ttyUSB*|/host-dev/ttyACM*) ;;
+      *) continue ;;
+    esac
+    name=${target##*/}
+    is_serial_name "${name}" || continue
+    if [ ! -c "${target}" ]; then
+      rm -f "${path}" && note "removed ${path}"
+    fi
+  done
+}
+
+watch_serial() {
+  while true; do
+    sync_serial || true
+    sleep 1
+  done
+}
+
+if ! sync_serial; then
+  note "/host-dev is not mounted; serial links stay absent."
+fi
+watch_serial &
 
 align_vscode || note "alignment returned nonzero."
 if ! touch "${ready}"; then

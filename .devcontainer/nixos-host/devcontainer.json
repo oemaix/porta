@@ -8,7 +8,7 @@
   "init": true,
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
-  "capAdd": ["SYS_ADMIN", "MKNOD"],
+  "capAdd": ["SYS_ADMIN"],
   "securityOpt": ["seccomp=unconfined"],
   "initializeCommand": "mkdir -p \"${localEnv:HOME}/.espressif\"",
   "runArgs": [
@@ -23,7 +23,8 @@
   },
   "mounts": [
     "source=/nix,target=/nix,type=bind,readonly",
-    "source=${localEnv:HOME}/.espressif,target=/root/.espressif,type=bind"
+    "source=${localEnv:HOME}/.espressif,target=/root/.espressif,type=bind",
+    "source=/dev,target=/host-dev,type=bind"
   ],
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
