@@ -2,9 +2,13 @@
   description = "Porta development environment";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+  # Official EIM binaries, built with the pkgs passed in. Follow this pin
+  # so the wrapper does not pull nixos-unstable (D-0028).
+  inputs.espidf.url = "github:hnaderi/espidf-nix";
+  inputs.espidf.inputs.nixpkgs.follows = "nixpkgs";
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, espidf, ... }:
     let
       systems = [
         "x86_64-linux"
@@ -20,10 +24,10 @@
         in
         {
           default = pkgs.mkShell {
-            # ESP-IDF is the framework (D-0028). nixpkgs 26.05 has esptool
-            # and a host gcc for the firmware logic test, not a packaged IDF
-            # or Xtensa toolchain. Do not add a third-party ESP-IDF flake
-            # here until it builds against this nixpkgs pin.
+            # The shell interpreter is python314. ESP-IDF v6.1 comes from
+            # hnaderi/espidf-nix (D-0028). That wrapper uses Python 3.13
+            # from this nixpkgs pin. EIM installs the chip toolchain into
+            # ~/.espressif on the first idf.py run.
             # shell/.zshrc is the interactive prompt and keeps `exit` at 0 (P-0034).
             shellHook = ''
               zdotdir=${./shell}
@@ -32,25 +36,33 @@
               fi
               export ZDOTDIR="$zdotdir"
             '';
-            packages = with pkgs; [
-              bashInteractive
-              zsh
-              git
-              python3
-              uv
-              curl
-              cacert
-              coreutils
-              findutils
-              gnugrep
-              gnused
-              gawk
-              which
-              cmake
-              ninja
-              gcc
-              esptool
-            ];
+            packages =
+              (with pkgs; [
+                bashInteractive
+                zsh
+                git
+                python314
+                uv
+                curl
+                cacert
+                coreutils
+                findutils
+                gnugrep
+                gnused
+                gawk
+                which
+                cmake
+                ninja
+                gcc
+                esptool
+              ])
+              ++ [
+                (espidf.lib.mkEspIdf {
+                  inherit pkgs;
+                  idfVersion = "v6.1";
+                  idfTargets = "esp32";
+                })
+              ];
           };
         }
       );

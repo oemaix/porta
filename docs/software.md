@@ -2,7 +2,7 @@
 
 Status: baseline · 2026-10-29
 
-The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework), [D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` and is not linked ([D-0043](decisions.md#d-0043-firmware-tree)). This page names the components and what crosses between them. Pins stay in [architecture](architecture.md). Listener actions stay in [ui design](ui-design.md).
+The Core2 application is one ESP-IDF image ([D-0028](decisions.md#d-0028-firmware-framework), [D-0042](decisions.md#d-0042-core2-components)). The tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)). This page names the components and what crosses between them. Pins stay in [architecture](architecture.md). Listener actions stay in [ui design](ui-design.md).
 
 The panel and the player share that image. Their seam is a set of player commands and one status snapshot. PCM does not cross the seam. cspot is the part that needs the Core2's 8 MB PSRAM ([D-0029](decisions.md#d-0029-spotify-transport)). The panel draws its own color blocks ([D-0011](decisions.md#d-0011-visual-language)). A stored 320×240 frame at 16 bits per pixel is 150 KB and belongs in PSRAM when the renderer keeps one.
 

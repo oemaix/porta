@@ -29,4 +29,4 @@ Phase 1 proves the two hard paths separately and puts a usable UI on the Core2. 
 
 ## Non-goals for the skeleton
 
-The firmware framework is ESP-IDF ([D-0028](decisions.md#d-0028-firmware-framework)). The Core2 application is `firmware/` and is not linked ([D-0043](decisions.md#d-0043-firmware-tree)).
+The firmware framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The Core2 application is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).

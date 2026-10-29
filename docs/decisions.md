@@ -35,7 +35,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0025](#d-0025-microsd-in-phase-1) | Decided | microSD is unused in phase 1 |
 | [D-0026](#d-0026-second-hmi-button) | Undecided | Side button index 3 |
 | [D-0027](#d-0027-microsd-purpose) | Undecided | Config store is a candidate; offline Spotify is not |
-| [D-0028](#d-0028-firmware-framework) | Decided | ESP-IDF on both boards |
+| [D-0028](#d-0028-firmware-framework) | Decided | ESP-IDF v6.1 through EIM on this nixpkgs pin |
 | [D-0029](#d-0029-spotify-transport) | Decided | Core2 is a Connect speaker via cspot |
 | [D-0030](#d-0030-login) | Undecided | Phase 1 login and the later easier login |
 | [D-0031](#d-0031-board-link) | Decided | I2C on GPIO32/33, I2S on GPIO14/13/26 |
@@ -47,7 +47,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0037](#d-0037-license) | Decided | Apache License 2.0 |
 | [D-0038](#d-0038-enclosure-and-approvals) | Decided | The stack is the enclosure; no approvals |
 | [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
-| [D-0040](#d-0040-python) | Undecided | The flake's Python is enough until a package is needed |
+| [D-0040](#d-0040-python) | Decided | `python314` until a package is needed, then `uv` and a `.venv` |
 | [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
 | [D-0042](#d-0042-core2-components) | Decided | Core2 image: panel, player, and sink |
 | [D-0043](#d-0043-firmware-tree) | Decided | Core2 tree exists; tone stand-in; I2S still off |
@@ -220,7 +220,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** The required extensions are `jnoortheen.nix-ide`, `editorconfig.editorconfig`, `DavidAnson.vscode-markdownlint`, `yzhang.markdown-all-in-one`, `ms-vscode.cpptools`, `ms-vscode.vscode-serial-monitor`, and `ms-python.python`.
 - **Source:** Reasonable completion from the skeleton: Nix, Markdown, EditorConfig, C or C++, serial logs, and Python.
-- **Consequence:** The Espressif VS Code extension stays off this list until the devshell provides `idf.py`. That extension installs its own IDF copy and would fight the flake.
+- **Consequence:** The Espressif VS Code extension stays off this list. The shell already provides `idf.py` ([D-0028](#d-0028-firmware-framework)). That extension installs a second copy and would fight it.
 
 ### D-0025 microSD in phase 1
 
@@ -232,9 +232,9 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0028 Firmware framework
 
 - **Status:** Decided
-- **Choice:** Both the Core2 and the Stamp Pico are ESP-IDF applications. One IDF generation covers both. Arduino and PlatformIO are not used.
-- **Source:** Project decision, 2026-10-28.
-- **Consequence:** `flake.nix` installs `esptool`, host `gcc`, CMake, and Ninja from nixpkgs 26.05. That pin has no ESP-IDF package and no Xtensa toolchain. The usual Nix ESP-IDF flakes are pinned to older nixpkgs and currently break on 26.05 because Python 3.10 was removed. They are not inputs of this flake. `idf.py` arrives in a later change that can build against this pin. The application tree is [D-0043](#d-0043-firmware-tree).
+- **Choice:** Both the Core2 and the Stamp Pico use ESP-IDF v6.1. One generation covers both. `idf.py` comes from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), the same shape as the [NixOS wiki ESP-IDF example](https://nixos.wiki/wiki/ESP-IDF). That flake is built with this repository's nixpkgs pin and installs the official tools through Espressif's Installation Manager. Arduino and PlatformIO are not used.
+- **Source:** Project decision, 2026-10-28, revised 2026-10-29. The Installation Manager documents Python 3.10, 3.11, 3.12, 3.13, and 3.14 ([prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html)). The wrapper passes Python 3.13 from nixpkgs 26.05 into that installer. The ESP-IDF release is v6.1.
+- **Consequence:** `nix develop` puts `idf.py` on `PATH`. The chip toolchain is not in the Nix store. The first `idf.py` run installs v6.1 for the `esp32` target under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). A Nix flake pinned to an older nixpkgs stays out ([P-0020](pitfalls.md#p-0020-no-toolchain-yet)). `firmware/` is the Core2 project this shell builds. The Stamp Pico image is still produced by the project that consumes Postern ([D-0039](#d-0039-firmware-repos)).
 
 ### D-0029 Spotify transport
 
@@ -323,7 +323,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0043 Firmware tree
 
 - **Status:** Decided
-- **Choice:** The Core2 application is `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in the header-only component `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. Hardware I2S and Wi-Fi stay off. The image is not linked, because `idf.py` is still absent.
+- **Choice:** The Core2 application is `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in the header-only component `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. Hardware I2S and Wi-Fi stay off. `idf.py` is provided by [D-0028](#d-0028-firmware-framework). Linking still does not start the codec.
 - **Source:** Phase 1 implementation, 2026-10-29. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
 - **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0039](pitfalls.md#p-0039-tone-stand-in)). The codec stays off until the rail is measured ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
 
@@ -381,9 +381,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 
 ### D-0040 Python
 
-- **Status:** Undecided
-- **Options:** The flake's `python3` only. `uv` plus a gitignored `.venv` as soon as the shell exists. `pip` into that environment.
-- **Recommendation:** The flake is enough today. The hook and the shell scripts use the standard library and nothing from PyPI. Add `uv` to `flake.nix`, and create a gitignored `.venv` with it, on the day a third-party package is imported. Do not use `pip`. Keep that environment separate from the Python tree ESP-IDF will install for `idf.py`.
-- **Source:** Project question, 2026-10-28.
-- **Consequence:** No `.venv`, no `uv`, and no `requirements.txt` until this id closes. Postern's shell matches this one. [P-0029](pitfalls.md#p-0029-pip).
+- **Status:** Decided
+- **Choice:** The project interpreter is the flake's `python314` and the standard library. `uv` is already in the shell. A gitignored `.venv` is created with `uv` on the day a third-party package is imported. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
+- **Source:** Project question, 2026-10-28, decided 2026-10-29.
+- **Consequence:** No `.venv` and no `requirements.txt` while the hooks and the shell scripts import only the standard library. Postern keeps its own open id for the same question. [P-0029](pitfalls.md#p-0029-pip).
 

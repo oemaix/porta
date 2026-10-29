@@ -1,6 +1,13 @@
 # Core2 application
 
-ESP-IDF image for the Core2. It is not linked: the devshell has no `idf.py` ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
+ESP-IDF v6.1 image for the Core2. Build it from the Porta devshell ([D-0028](../docs/decisions.md#d-0028-firmware-framework)):
+
+```sh
+idf.py set-target esp32
+idf.py build
+```
+
+The first run installs the toolchain under `~/.espressif`. The image does not start Wi-Fi or the codec ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
 
 Phase 1 behavior that runs on the host:
 

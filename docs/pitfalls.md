@@ -125,7 +125,7 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0020 No toolchain yet
 
 - **Status:** Resolved
-- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. The application tree stays out until a firmware change ([D-0021](decisions.md#d-0021-no-firmware-tree)). Do not add an ESP-IDF Nix flake that is pinned to an older nixpkgs.
+- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. Do not add an ESP-IDF Nix flake that is pinned to an older nixpkgs. [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) is not one of those flakes: it is built with this pin and installs v6.1 through EIM.
 
 ### P-0021 Blackberry pixels
 
@@ -180,7 +180,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not `pip install` into the devshell, a user site, or a project `.venv`.
-- **Why:** The interpreter is the flake's `python3` until [D-0040](decisions.md#d-0040-python) closes. A virtualenv with no packages is a second interpreter. ESP-IDF will bring its own Python later, and that tree stays separate.
+- **Why:** [D-0040](decisions.md#d-0040-python). The project interpreter is the flake's `python314`. A `.venv` is created with `uv` only when a third-party package is imported. That directory must not be the Installation Manager's tree under `~/.espressif`.
 
 ### P-0030 No Classic Bluetooth
 
@@ -248,6 +248,18 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not start Module Audio I2S, and do not start Wi-Fi, from this tree before the AXP192 current limit is a measured value. Do not paste a generic ES8388 init that also enables the NS4168. Do not treat the bench supply as that measurement.
 - **Why:** [NFR-04](requirements.md) and [P-0018](#p-0018-brownout). The internal codec shares the Module Audio pins ([P-0006](#p-0006-internal-i2s)). [D-0043](decisions.md#d-0043-firmware-tree) accepts a bench supply for the prototypes and leaves `porta_board_i2s_allowed` false.
 
+### P-0041 EIM home install
+
+- **Status:** Open
+- **Avoid:** Do not commit `~/.espressif` or `~/.cache/espidf-nix`. Do not expect the Nix store to contain the Xtensa toolchain. Do not point `IDF_VERSION` at an unpinned tag.
+- **Why:** [D-0028](decisions.md#d-0028-firmware-framework). [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) puts `idf.py` on `PATH`. Espressif's installer writes v6.1 under `~/.espressif` the first time that command runs. The store holds the wrapper and the pinned installer, not the chip tools.
+
+### P-0042 FHS namespace
+
+- **Status:** Open
+- **Avoid:** Do not drop [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) because bubblewrap failed in one container. Do not replace it with an ESP-IDF flake pinned to an older nixpkgs.
+- **Why:** `idf.py` runs inside `buildFHSEnv`. That needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. The wrapper is still the shell's `idf.py` ([D-0028](decisions.md#d-0028-firmware-framework)).
+
 ## Resolved
 
-[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. The text stays above so the ids are not reused.
+[P-0020](#p-0020-no-toolchain-yet) and [P-0028](#p-0028-postern-file-url) are resolved. [P-0041](#p-0041-eim-home-install) records where the chip tools land. [P-0042](#p-0042-fhs-namespace) records the mount namespace `idf.py` needs. The text stays above so the ids are not reused.

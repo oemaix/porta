@@ -2,7 +2,7 @@
 
 Status: baseline · 2026-10-29
 
-The framework is ESP-IDF ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `esptool` and a host `gcc`. It does not yet provide `idf.py` or the Xtensa toolchain. It does not flash a board. The Core2 tree is `firmware/` and is not linked ([D-0043](decisions.md#d-0043-firmware-tree)).
+The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a serial port. The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -14,13 +14,13 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, host `gcc`, and `esptool` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python3` and the standard library. There is no `.venv` yet ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. It is not the Xtensa toolchain.
+The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, host `gcc`, `esptool`, and `idf.py` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python314` and the standard library. There is no `.venv` until a third-party package is imported ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. `idf.py` is the ESP-IDF v6.1 wrapper. Its Python is 3.13 from this nixpkgs pin, inside the Installation Manager's own environment, not the flake's `python314`.
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
 
 ## Core2 host test
 
-`firmware/` is the Core2 application. `idf.py` cannot link it yet. The panel, the player commands, and the tone PCM run as a host program. The binary goes under `tmp/`, which is scratch.
+`firmware/` is the Core2 application. This check compiles the panel, the player commands, and the tone PCM with host `gcc`. It does not call `idf.py`. The binary goes under `tmp/`, which is scratch.
 
 ```sh
 gcc -std=c11 -Wall -Wextra -Werror \
@@ -45,7 +45,18 @@ gcc -std=c11 -Wall -Wextra -Werror \
 tmp/porta-phase1-test
 ```
 
-Stage `flake.nix` before the next `nix develop` if that file changed ([P-0022](pitfalls.md#p-0022-untracked-flake-files)).
+Stage `flake.nix` and `flake.lock` before the next `nix develop` if either file changed ([P-0022](pitfalls.md#p-0022-untracked-flake-files)).
+
+## Core2 image
+
+From this shell, in `firmware/`:
+
+```sh
+idf.py set-target esp32
+idf.py build
+```
+
+The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later commands reuse that install. `idf.py` enters that install through bubblewrap and needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). Flash with `idf.py -p` and the port chosen at that moment. This page does not name a port, a baud rate, or an offset.
 
 ## Postern
 
@@ -82,7 +93,7 @@ These are the extensions a workspace should install ([D-0024](decisions.md#d-002
 | `ms-vscode.vscode-serial-monitor` | Board bring-up logs |
 | `ms-python.python` | The agent hook and host scripts |
 
-The Espressif VS Code extension is not required. It installs a second ESP-IDF, and this shell does not provide `idf.py` yet.
+The Espressif VS Code extension is not required. The shell provides `idf.py`. That extension would install a second copy ([D-0024](decisions.md#d-0024-editor-extensions)).
 
 ## Agent shell hook
 
@@ -114,5 +125,5 @@ The rules are reminders. The tracked text is this suite.
 ## What this phase does not do
 
 - It does not select a serial port, a baud rate, or a flash offset.
-- It does not link or flash the Core2 image.
-- The host test above is the check this shell can run.
+- It does not flash a board by itself. `idf.py build` in `firmware/` is the image build, where a mount namespace is allowed.
+- The host test does not need the chip toolchain.

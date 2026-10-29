@@ -33,7 +33,7 @@ Not in this phase: AirPlay, DLNA, auxiliary mode, the easier login, battery indi
 
 ## Still open for a hardware pass
 
-- [D-0028](decisions.md#d-0028-firmware-framework) is closed: ESP-IDF. `idf.py` is not in the shell yet, so `firmware/` is not linked.
+- [D-0028](decisions.md#d-0028-firmware-framework) is closed: ESP-IDF v6.1, with `idf.py` in the Porta shell. The chip tools install under `~/.espressif` on first use.
 - [D-0029](decisions.md#d-0029-spotify-transport) is closed: cspot on the Core2. The tree uses the labelled tone stand-in until that library is linked ([P-0039](pitfalls.md#p-0039-tone-stand-in)). Catalog search is still later.
 - [D-0031](decisions.md#d-0031-board-link) and [D-0032](decisions.md#d-0032-i2s-format) are closed. Phase 1 still brings the boards up separately.
 - [D-0033](decisions.md#d-0033-power-architecture) stays open for the product. The prototypes accept a bench supply ([D-0043](decisions.md#d-0043-firmware-tree)). That is not a measured AXP192 limit, so I2S and Wi-Fi stay off ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
