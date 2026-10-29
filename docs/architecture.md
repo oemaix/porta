@@ -76,7 +76,7 @@ The ESP32 GPIO matrix can route I2S0 or I2S1 to other output-capable pins. Input
 
 Leave these alone when adding a second audio port: GPIO0, GPIO2, GPIO12, and GPIO34 (codec), GPIO21 and GPIO22 (internal I2C), GPIO18, GPIO23, GPIO38, GPIO5, GPIO15, and GPIO4 (LCD and microSD), GPIO1 and GPIO3 (USB download), GPIO39 (touch interrupt). GPIO25 is the LED data pin on M5GO Bottom2.
 
-Pins that remain usable for another I2S are GPIO13, GPIO14, GPIO19, GPIO26, and GPIO27. GPIO32 and GPIO33 can also carry I2S, and this design uses them for the external I2C instead. The cable is [D-0031](decisions.md#d-0031-board-link): I2S1 on Core2 GPIO14, GPIO13, and GPIO26, master on the Core2, data toward the Stamp Pico only. The Stamp Pico receives that data on GPIO26, with the clocks on GPIO18 and GPIO19. The clock numbers are not the Core2 numbers. The data wire is GPIO26 on both chips.
+After the codec and the panel, the Core2 pins that can carry I2S are GPIO13, GPIO14, GPIO19, GPIO26, and GPIO27. This cable uses GPIO14 for BCLK, GPIO13 for LRCK, and GPIO26 for data out ([D-0031](decisions.md#d-0031-board-link)). GPIO19 and GPIO27 stay free on the Core2. GPIO32 and GPIO33 can also carry I2S, and this design uses them for the external I2C instead. The Stamp Pico receives that data on GPIO26, with the clocks on GPIO18 and GPIO19. The clock numbers are not the Core2 numbers. The data wire is GPIO26 on both chips.
 
 Module Audio's configuration A is the Core2 setting. Its bus drawing places I2S on pins 21–26, which on this host are GPIO27, GPIO19, GPIO2, GPIO0, and GPIO34. Confirm the module's switch before driving those pins. Do not enable the NS4168 at the same time ([P-0006](pitfalls.md#p-0006-internal-i2s)).
 
