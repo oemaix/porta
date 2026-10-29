@@ -24,10 +24,10 @@
         in
         {
           default = pkgs.mkShell {
-            # The shell interpreter is python314. ESP-IDF v6.1 comes from
-            # hnaderi/espidf-nix (D-0028). That wrapper uses Python 3.13
-            # from this nixpkgs pin. EIM installs the chip toolchain into
-            # ~/.espressif on the first idf.py run.
+            # ESP-IDF v6.1 comes from hnaderi/espidf-nix (D-0028).
+            # That wrapper uses Python 3.13 from this nixpkgs pin. EIM
+            # installs the chip toolchain into ~/.espressif on the first
+            # idf.py run. This flake does not carry a project Python (D-0044).
             # shell/.zshrc is the interactive prompt and keeps `exit` at 0 (P-0034).
             shellHook = ''
               zdotdir=${./shell}
@@ -41,8 +41,6 @@
                 bashInteractive
                 zsh
                 git
-                python314
-                uv
                 curl
                 cacert
                 coreutils
@@ -54,7 +52,6 @@
                 cmake
                 ninja
                 gcc
-                esptool
               ])
               ++ [
                 (espidf.lib.mkEspIdf {

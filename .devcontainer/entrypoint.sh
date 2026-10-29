@@ -94,6 +94,32 @@ align_vscode() {
   note "vscode is $(id -u vscode):$(id -g vscode); ${ws} is ${owner_uid}:${owner_gid}."
 }
 
+# A --device bind keeps the host owner. That uid is outside this
+# container's map, so the node shows up as 65534 and is not readable
+# (P-0043). A node created here is owned by this container.
+make_serial() {
+  local path="/dev/$1" major="$2" minor="$3" owner=""
+  if [ -e "${path}" ]; then
+    owner=$(stat -c %u "${path}" 2>/dev/null || true)
+    if [ "${owner}" = "0" ]; then
+      return 0
+    fi
+    rm -f "${path}" 2>/dev/null || true
+    if [ -e "${path}" ]; then
+      note "${path} is owned by uid ${owner} and cannot be replaced."
+      return 0
+    fi
+  fi
+  if ! mknod "${path}" c "${major}" "${minor}"; then
+    note "mknod ${path} failed."
+    return 0
+  fi
+  chown root:dialout "${path}" || note "chown ${path} failed."
+  chmod 660 "${path}" || note "chmod ${path} failed."
+}
+make_serial ttyUSB0 188 0
+make_serial ttyACM0 166 0
+
 align_vscode || note "alignment returned nonzero."
 if ! touch "${ready}"; then
   note "could not write ${ready}."

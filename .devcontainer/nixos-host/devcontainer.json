@@ -8,16 +8,22 @@
   "init": true,
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
-  "capAdd": ["SYS_ADMIN"],
+  "capAdd": ["SYS_ADMIN", "MKNOD"],
   "securityOpt": ["seccomp=unconfined"],
-  "runArgs": ["--device=/dev/ttyUSB0", "--group-add=dialout"],
+  "initializeCommand": "mkdir -p \"${localEnv:HOME}/.espressif\"",
+  "runArgs": [
+    "--group-add=dialout",
+    "--device-cgroup-rule=c 188:* rmw",
+    "--device-cgroup-rule=c 166:* rmw"
+  ],
   "containerEnv": {
     "NIX_CONFIG": "experimental-features = nix-command flakes",
     "NIX_REMOTE": "daemon",
     "DEVCONTAINER_WORKSPACE": "${containerWorkspaceFolder}"
   },
   "mounts": [
-    "source=/nix,target=/nix,type=bind,readonly"
+    "source=/nix,target=/nix,type=bind,readonly",
+    "source=${localEnv:HOME}/.espressif,target=/root/.espressif,type=bind"
   ],
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {

@@ -2,7 +2,7 @@
 
 Status: baseline · 2026-10-29
 
-The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a baud rate or a flash offset. The devcontainer passes the host node `/dev/ttyUSB0` ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+The framework is ESP-IDF v6.1 ([D-0028](decisions.md#d-0028-firmware-framework)). The shell provides `idf.py` through [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), plus `esptool` and a host `gcc`. The chip toolchain is downloaded into `~/.espressif` on the first `idf.py` run ([P-0041](pitfalls.md#p-0041-eim-home-install)). The shell does not choose a baud rate or a flash offset. The devcontainer creates `/dev/ttyUSB0` and `/dev/ttyACM0` inside the container ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 on this bench is `/dev/ttyACM0`. `~/.espressif` in this image is `/root/.espressif`. The devcontainer bind-mounts the login user's `~/.espressif` on the host there ([P-0041](pitfalls.md#p-0041-eim-home-install)). The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -14,7 +14,7 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, Python 3, zsh, bash, CMake, Ninja, host `gcc`, `esptool`, and `idf.py` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python is the flake's `python314` and the standard library. There is no `.venv` until a third-party package is imported ([D-0040](decisions.md#d-0040-python), [P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. `idf.py` is the ESP-IDF v6.1 wrapper. Its Python is 3.13 from this nixpkgs pin, inside the Installation Manager's own environment, not the flake's `python314`.
+The shell replaces `PATH`. Git, zsh, bash, CMake, Ninja, host `gcc`, `esptool`, and `idf.py` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. The flake does not provide Python ([D-0044](decisions.md#d-0044-python-out-of-the-flake), [P-0044](pitfalls.md#p-0044-python-in-the-flake)). There is no `.venv`. A later third-party import gets a gitignored `.venv` from `uv`, and `pip` stays unused ([P-0029](pitfalls.md#p-0029-pip)). `gcc` is the host compiler for the firmware logic test. `idf.py` is the ESP-IDF v6.1 wrapper. Its Python is 3.13 from this nixpkgs pin, inside the Installation Manager's own environment.
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
 
@@ -64,7 +64,7 @@ The first command installs ESP-IDF v6.1 for `esp32` under `~/.espressif`. Later 
 
 ## Devcontainer
 
-The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)). Both configs add `SYS_ADMIN` and `seccomp=unconfined` so `idf.py` can create its mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace)). Both pass `/dev/ttyUSB0` and add the `dialout` group ([P-0043](pitfalls.md#p-0043-serial-device-node)). Plug the adapter in before Reopen in Container. A rebuild is required before a running container sees either change.
+The container is optional ([D-0013](decisions.md#d-0013-build-entry)). `.devcontainer/Dockerfile` uses Ubuntu 26.04 LTS and installs official single-user Nix 2.35.4, with flakes enabled, for the `vscode` user ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). That user is the image's existing uid 1000 account, renamed ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). On start, `.devcontainer/entrypoint.sh` moves that account onto the workspace owner as the owner appears inside the container. The path comes from `DEVCONTAINER_WORKSPACE` ([P-0037](pitfalls.md#p-0037-checkout-directory-name)), and `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). Rootless Docker shows the host user as uid 0. `nix-command` and `flakes` are one line of `NIX_CONFIG`. The image file `/etc/nix/nix.conf` carries the same features, `accept-flake-config = false`, and `sandbox = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). The Nix sandbox is off inside that container only ([P-0019](pitfalls.md#p-0019-container-sandbox)). Both configs add `SYS_ADMIN`, `MKNOD`, and `seccomp=unconfined` so `idf.py` can create its mount namespace and the entrypoint can create the serial nodes ([P-0042](pitfalls.md#p-0042-fhs-namespace), [P-0043](pitfalls.md#p-0043-serial-device-node)). Both bind the login user's `~/.espressif` on the host onto `/root/.espressif`. Reloading the IDE keeps the running container and its writable layer. Rebuilding the container starts a new layer. Copy `/root/.espressif` to that user's home before that rebuild, or the bind hides the copy that exists only in the old layer. A rebuild is required before a running container sees these keys. The Dockerfile is unchanged.
 
 Reopen in Container asks which config to use ([D-0041](decisions.md#d-0041-devcontainer-host)).
 
@@ -91,7 +91,7 @@ These are the extensions a workspace should install ([D-0024](decisions.md#d-002
 | `yzhang.markdown-all-in-one` | Edit the doc suite |
 | `ms-vscode.cpptools` | ESP-IDF firmware is C |
 | `ms-vscode.vscode-serial-monitor` | Board bring-up logs |
-| `ms-python.python` | The agent hook and host scripts |
+| `ms-python.python` | The agent hook. The flake does not provide its interpreter ([D-0044](decisions.md#d-0044-python-out-of-the-flake)) |
 
 The Espressif VS Code extension is not required. The shell provides `idf.py`. That extension would install a second copy ([D-0024](decisions.md#d-0024-editor-extensions)).
 
@@ -99,7 +99,7 @@ The Espressif VS Code extension is not required. The shell provides `idf.py`. Th
 
 `.cursor/` is gitignored ([D-0017](decisions.md#d-0017-gitignore)). Cursor users on a fresh clone do not get the hook until it is copied back. The copy to install is `.cursor/hooks/nix-develop.py` and `.cursor/hooks/nix-develop-postern.py`, plus `.cursor/hooks.json`. The Porta script started from `nix-develop.py` in the `bootstrap` skill. The Postern script is local to this checkout.
 
-The hooks are `preToolUse` filters on the Shell tool. `.cursor/hooks/nix-develop-postern.py` rewrites a command when its working directory is inside `postern/`, and runs it in that flake. `.cursor/hooks/nix-develop.py` does the same selection for every command. A command is left unchanged when `IN_NIX_SHELL` is already set or it already contains `nix develop -c` ([D-0018](decisions.md#d-0018-agent-shell), [P-0014](pitfalls.md#p-0014-hook-reentry)). `beforeShellExecution` cannot change the command, so the hooks are not attached there.
+The hooks are `preToolUse` filters on the Shell tool. They are standard-library Python. The process that launches them supplies `python3`. That interpreter is not a flake package ([D-0044](decisions.md#d-0044-python-out-of-the-flake)). `.cursor/hooks/nix-develop-postern.py` rewrites a command when its working directory is inside `postern/`, and runs it in that flake. `.cursor/hooks/nix-develop.py` does the same selection for every command. A command is left unchanged when `IN_NIX_SHELL` is already set or it already contains `nix develop -c` ([D-0018](decisions.md#d-0018-agent-shell), [P-0014](pitfalls.md#p-0014-hook-reentry)). `beforeShellExecution` cannot change the command, so the hooks are not attached there.
 
 Restore check:
 
@@ -124,6 +124,6 @@ The rules are reminders. The tracked text is this suite.
 
 ## What this phase does not do
 
-- It does not select a baud rate or a flash offset. The devcontainer node is `/dev/ttyUSB0` when that path exists on the host.
+- It does not select a baud rate or a flash offset. The container nodes are `/dev/ttyUSB0` and `/dev/ttyACM0`. The Core2 on this bench is `/dev/ttyACM0`.
 - It does not flash a board by itself. `idf.py build` in `firmware/` is the image build, where a mount namespace is allowed.
 - The host test does not need the chip toolchain.

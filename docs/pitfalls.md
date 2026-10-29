@@ -180,7 +180,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not `pip install` into the devshell, a user site, or a project `.venv`.
-- **Why:** [D-0040](decisions.md#d-0040-python). The project interpreter is the flake's `python314`. A `.venv` is created with `uv` only when a third-party package is imported. That directory must not be the Installation Manager's tree under `~/.espressif`.
+- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). A `.venv`, when one is required, is created with `uv`. That directory must not be the Installation Manager's tree under `~/.espressif`. The flake does not carry `uv` until that day ([P-0044](#p-0044-python-in-the-flake)).
 
 ### P-0030 No Classic Bluetooth
 
@@ -252,7 +252,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not commit `~/.espressif` or `~/.cache/espidf-nix`. Do not expect the Nix store to contain the Xtensa toolchain. Do not point `IDF_VERSION` at an unpinned tag.
-- **Why:** [D-0028](decisions.md#d-0028-firmware-framework). [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) puts `idf.py` on `PATH`. Espressif's installer writes v6.1 under `~/.espressif` the first time that command runs. The store holds the wrapper and the pinned installer, not the chip tools.
+- **Why:** [D-0028](decisions.md#d-0028-firmware-framework). [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) puts `idf.py` on `PATH`. Espressif's installer writes v6.1 under `~/.espressif` the first time that command runs. The store holds the wrapper and the pinned installer, not the chip tools. In this image that path is `/root/.espressif`, because the session runs as root ([P-0032](#p-0032-container-uid)). On the host the same tree is the login user's `~/.espressif`, not root's home ([D-0014](decisions.md#d-0014-devcontainer-base)). `~/.cache/espidf-nix` is left in the container layer. It is small and is written again when the activation script is newer. Reloading the IDE keeps the container, so an unmounted directory stays. Rebuilding the container drops the writable layer. Copy `/root/.espressif` to the login user's home before the rebuild that adds the bind, or the new container hides the copy that is still only in the old layer.
 
 ### P-0042 FHS namespace
 
@@ -263,8 +263,14 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0043 Serial device node
 
 - **Status:** Open
-- **Avoid:** Do not pass the whole host `/dev` tree into the container. Do not name a baud rate or a flash offset in `devcontainer.json`. Do not start the container while `/dev/ttyUSB0` is absent on the host.
-- **Why:** USB serial on Linux is major 188. The node name is assigned when the adapter enumerates. This bench uses `/dev/ttyUSB0`, and both Porta devcontainers pass that node with `--device` and add the `dialout` group ([D-0014](decisions.md#d-0014-devcontainer-base)). Docker refuses to create the container when the path is missing. A later plug-in does not appear until the container is created again. The image account already belongs to `dialout` ([P-0031](#p-0031-ubuntu-uid-1000)). `idf.py` sees the node because its sandbox bind-mounts the container `/dev`.
+- **Avoid:** Do not pass the whole host `/dev` tree into the container. Do not bind the host device inodes in with `--device`. Do not make those host nodes world-writable. Do not name a baud rate or a flash offset in `devcontainer.json`.
+- **Why:** `ttyUSB` is major 188 and `ttyACM` is major 166. This bench uses `/dev/ttyUSB0` and `/dev/ttyACM0`. The Core2 is `/dev/ttyACM0`. A `--device` bind keeps the host owner. Container uid 0 is the host user, not host root, so that owner appears as uid/gid `65534` and mode `0660` is not readable here. `dialout` does not match it, and `chmod` inside the container is rejected. The entrypoint creates both nodes with `mknod`, owner `root:dialout`, mode `0660` ([D-0014](decisions.md#d-0014-devcontainer-base)). The configs allow those majors with a device cgroup rule and add `MKNOD`. The image account is already in `dialout` ([P-0031](#p-0031-ubuntu-uid-1000)). `idf.py` sees the node because its sandbox bind-mounts the container `/dev`. The cable can be plugged in after the container exists. A running container does not gain `MKNOD` until it is created again.
+
+### P-0044 Python in the flake
+
+- **Status:** Open
+- **Avoid:** Do not add `python3`, `python314`, `uv`, or `pip` to the Porta flake until a Porta script must import a third-party package. Do not treat the agent hooks or `idf.py` as that need.
+- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). `python314` and `uv` left the flake because this repository does not import them. `idf.py` keeps Python 3.13 inside `~/.espressif`. The hooks are standard-library scripts started by the host `python3`. When a third-party import arrives, add `uv` and create a gitignored `.venv` with it. `pip` stays out ([P-0029](#p-0029-pip)).
 
 ## Resolved
 

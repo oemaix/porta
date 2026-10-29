@@ -47,10 +47,11 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0037](#d-0037-license) | Decided | Apache License 2.0 |
 | [D-0038](#d-0038-enclosure-and-approvals) | Decided | The stack is the enclosure; no approvals |
 | [D-0039](#d-0039-firmware-repos) | Decided | Core2 in this repo; Postern is the bridge component |
-| [D-0040](#d-0040-python) | Decided | `python314` until a package is needed, then `uv` and a `.venv` |
+| [D-0040](#d-0040-python) | Decided | Superseded by D-0044 |
 | [D-0041](#d-0041-devcontainer-host) | Decided | Pick Nix on Ubuntu or the NixOS host store |
 | [D-0042](#d-0042-core2-components) | Decided | Core2 image: panel, player, and sink |
 | [D-0043](#d-0043-firmware-tree) | Decided | Core2 tree exists; tone stand-in; I2S still off |
+| [D-0044](#d-0044-python-out-of-the-flake) | Decided | No project Python in the flake; a later `.venv` uses `uv` |
 
 ## Decided
 
@@ -150,7 +151,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** The container image is Ubuntu 26.04 LTS. Nix 2.35.4 is installed with the official single-user installer (`--no-daemon`) from `releases.nixos.org`, flakes enabled, for the `vscode` user.
 - **Source:** Reasonable completion. "Ubuntu LTS" at the time of bootstrap is 26.04, not the interim 26.10. Single-user Nix matches a one-user container.
-- **Consequence:** Host Nix settings are not copied into the image. The installer URL is pinned ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). The container sandbox exception is [P-0019](pitfalls.md#p-0019-container-sandbox). The image account starts at uid 1000 ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). `.devcontainer/entrypoint.sh` then moves it onto the workspace owner seen inside the container. `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). The mount path comes from `DEVCONTAINER_WORKSPACE`, not from a fixed directory name ([P-0037](pitfalls.md#p-0037-checkout-directory-name)). Reopen in Container offers two configs ([D-0041](#d-0041-devcontainer-host)). Only the NixOS config bind-mounts the host `/nix` read-only. Both enable `nix-command` and `flakes` through one line of `NIX_CONFIG`. `/etc/nix/nix.conf` also sets `accept-flake-config = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). Both configs add `SYS_ADMIN`, lift the Docker seccomp profile, and pass the host node `/dev/ttyUSB0` ([P-0042](pitfalls.md#p-0042-fhs-namespace), [P-0043](pitfalls.md#p-0043-serial-device-node)).
+- **Consequence:** Host Nix settings are not copied into the image. The installer URL is pinned ([P-0036](pitfalls.md#p-0036-floating-nix-installer)). The container sandbox exception is [P-0019](pitfalls.md#p-0019-container-sandbox). The image account starts at uid 1000 ([P-0031](pitfalls.md#p-0031-ubuntu-uid-1000)). `.devcontainer/entrypoint.sh` then moves it onto the workspace owner seen inside the container. `updateRemoteUserUID` stays off ([P-0032](pitfalls.md#p-0032-container-uid)). The mount path comes from `DEVCONTAINER_WORKSPACE`, not from a fixed directory name ([P-0037](pitfalls.md#p-0037-checkout-directory-name)). Reopen in Container offers two configs ([D-0041](#d-0041-devcontainer-host)). Only the NixOS config bind-mounts the host `/nix` read-only. Both enable `nix-command` and `flakes` through one line of `NIX_CONFIG`. `/etc/nix/nix.conf` also sets `accept-flake-config = false` ([P-0033](pitfalls.md#p-0033-host-nix-store)). Both configs add `SYS_ADMIN` and `MKNOD`, lift the Docker seccomp profile, and allow device majors 188 and 166. The entrypoint creates `/dev/ttyUSB0` and `/dev/ttyACM0` inside the container ([P-0042](pitfalls.md#p-0042-fhs-namespace), [P-0043](pitfalls.md#p-0043-serial-device-node)). Both bind the login user's `~/.espressif` on the host onto `/root/.espressif` in the container ([P-0041](pitfalls.md#p-0041-eim-home-install)).
 
 ### D-0015 Nixpkgs
 
@@ -327,6 +328,20 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Source:** Phase 1 implementation, 2026-10-29. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
 - **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0039](pitfalls.md#p-0039-tone-stand-in)). The codec stays off until the rail is measured ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
 
+### D-0040 Python
+
+- **Status:** Decided
+- **Choice:** The project interpreter is the flake's `python314` and the standard library. `uv` is already in the shell. A gitignored `.venv` is created with `uv` on the day a third-party package is imported. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
+- **Source:** Project question, 2026-10-28, decided 2026-10-29.
+- **Consequence:** Superseded by [D-0044](#d-0044-python-out-of-the-flake). The flake no longer carries `python314` or `uv`. [P-0029](pitfalls.md#p-0029-pip) still forbids `pip`.
+
+### D-0044 Python out of the flake
+
+- **Status:** Decided
+- **Choice:** The Porta flake does not carry a Python interpreter, `uv`, or `pip`. This supersedes [D-0040](#d-0040-python). Nothing in this repository imports a third-party Python package, so that ecosystem stays out of `flake.nix` until a Porta script must use it. On that day a gitignored `.venv` is created with `uv`. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
+- **Source:** Project decision, 2026-10-29. `python314` and `uv` left the flake because this repository does not call them.
+- **Consequence:** `nix develop` does not put `python3` on `PATH`. `idf.py` still uses Python 3.13 from this nixpkgs pin, inside `~/.espressif`, and that tree is not a project interpreter ([D-0028](#d-0028-firmware-framework)). The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy as [D-0019](../postern/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
+
 ## Undecided
 
 ### D-0026 Second HMI button
@@ -378,11 +393,4 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Recommendation:** Prototypes may use background `#1C1C1E`, surface `#2C2C2E`, text `#F5F5F7`, accent `#3D7EFF`, confirm `#2F9E62`, and danger `#D64545`. These values are not a brand decision.
 - **Source:** `ui.txt` says color blocks and does not give colors.
 - **Consequence:** No asset pipeline for a theme.
-
-### D-0040 Python
-
-- **Status:** Decided
-- **Choice:** The project interpreter is the flake's `python314` and the standard library. `uv` is already in the shell. A gitignored `.venv` is created with `uv` on the day a third-party package is imported. `pip` is not used. That `.venv` stays separate from the Python tree the Installation Manager keeps for `idf.py`.
-- **Source:** Project question, 2026-10-28, decided 2026-10-29.
-- **Consequence:** No `.venv` and no `requirements.txt` while the hooks and the shell scripts import only the standard library. Postern keeps its own open id for the same question. [P-0029](pitfalls.md#p-0029-pip).
 
