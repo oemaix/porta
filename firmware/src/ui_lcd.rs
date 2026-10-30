@@ -101,11 +101,19 @@ fn ili9342c_init() -> bool {
 
 fn lcd_bus() -> bool {
     let bus = sys::spi_bus_config_t {
-        mosi_io_num: LCD_MOSI,
-        miso_io_num: LCD_MISO,
+        __bindgen_anon_1: sys::spi_bus_config_t__bindgen_ty_1 {
+            mosi_io_num: LCD_MOSI,
+        },
+        __bindgen_anon_2: sys::spi_bus_config_t__bindgen_ty_2 {
+            miso_io_num: LCD_MISO,
+        },
         sclk_io_num: LCD_SCLK,
-        quadwp_io_num: -1,
-        quadhd_io_num: -1,
+        __bindgen_anon_3: sys::spi_bus_config_t__bindgen_ty_3 {
+            quadwp_io_num: -1,
+        },
+        __bindgen_anon_4: sys::spi_bus_config_t__bindgen_ty_4 {
+            quadhd_io_num: -1,
+        },
         max_transfer_sz: LCD_WIDTH * 2,
         ..Default::default()
     };
@@ -120,8 +128,11 @@ fn lcd_bus() -> bool {
         ..Default::default()
     };
     unsafe {
-        if sys::spi_bus_initialize(sys::spi_host_device_t_SPI3_HOST, &bus, sys::SPI_DMA_CH_AUTO)
-            != sys::ESP_OK
+        if sys::spi_bus_initialize(
+            sys::spi_host_device_t_SPI3_HOST,
+            &bus,
+            sys::spi_common_dma_t_SPI_DMA_CH_AUTO,
+        ) != sys::ESP_OK
         {
             return false;
         }

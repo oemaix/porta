@@ -5,3 +5,7 @@ ESP_IDF_SDKCONFIG_DEFAULTS = { value = "sdkconfig.defaults", relative = true }
 [target.xtensa-esp32-espidf]
 linker = "ldproxy"
 rustflags = ["--cfg", "espidf_time64"]
+
+# The esp-rs rustc is nightly and does not ship a prebuilt Xtensa std (P-0049).
+[unstable]
+build-std = ["std", "panic_abort"]

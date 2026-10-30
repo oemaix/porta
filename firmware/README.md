@@ -6,7 +6,13 @@ Rust crate on ESP-IDF v5.5.6 through `esp-idf-svc` ([D-0046](../docs/decisions.m
 cargo test --manifest-path firmware/Cargo.toml
 ```
 
-The image target is `xtensa-esp32-espidf`. `firmware/.cargo/config.toml` pins ESP-IDF v5.5.6. This shell does not yet provide that Rust target, so the image is not built here ([roadmap](../docs/roadmap.md)). A passing `cargo test` is not a flashed image ([P-0048](../docs/pitfalls.md#p-0048-core2-image-target)). The tree powers the panel and paints Now Playing. It has not started Wi-Fi or the codec yet ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
+The image target is `xtensa-esp32-espidf`. `firmware/.cargo/config.toml` pins ESP-IDF v5.5.6. From this directory, so Cargo reads that file:
+
+```sh
+cargo build --target xtensa-esp32-espidf
+```
+
+`embuild` clones that ESP-IDF tree into `.embuild/` on the build ([P-0049](../docs/pitfalls.md#p-0049-esp-rs-rustc)). A passing `cargo test` is not a flashed image ([P-0048](../docs/pitfalls.md#p-0048-core2-image-target)). The tree powers the panel and paints Now Playing. It has not started Wi-Fi or the codec yet ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
 
 Phase 1 behavior that the host test covers:
 

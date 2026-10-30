@@ -1,8 +1,8 @@
 # Operations
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
-The Core2 application is Rust on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). The Porta shell provides `cargo` and `rustc` for the host test. It does not yet provide `idf.py` or the Xtensa ESP-IDF Rust target, so the Core2 image is not built from this shell yet. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). The Stamp Pico image is Postern, and that shell provides `idf.py` for ESP-IDF v6.1. The devcontainer links every host `ttyUSB*` and `ttyACM*` node into `/dev` while it runs, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 on this bench is `/dev/ttyACM0`. The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
+The Core2 application is Rust on ESP-IDF v5.5.6 ([D-0046](decisions.md#d-0046-core2-language)). The Porta shell's `rustc` is the esp-rs release 1.95.0.0, and the shell also provides `ldproxy` and `espflash` ([P-0049](pitfalls.md#p-0049-esp-rs-rustc)). The `espflash` package installs `cargo-espflash` as well. It does not provide `idf.py`. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). The Stamp Pico image is Postern, and that shell provides `idf.py` for ESP-IDF v6.1. The devcontainer links every host `ttyUSB*` and `ttyACM*` node into `/dev` while it runs, including a cable plugged in after the IDE starts ([P-0043](pitfalls.md#p-0043-serial-device-node)). The Core2 on this bench is `/dev/ttyACM0`. The Core2 tree is `firmware/` ([D-0043](decisions.md#d-0043-firmware-tree)).
 
 ## Host
 
@@ -14,7 +14,7 @@ nix develop
 
 Nix evaluates a Git checkout from the files Git tracks. After `git init`, stage `flake.nix` and `flake.lock` (or commit them) before the first `nix develop`. An unstaged edit of `flake.nix` is invisible to the next shell. See [P-0022](pitfalls.md#p-0022-untracked-flake-files).
 
-The shell replaces `PATH`. Git, zsh, bash, CMake, Ninja, host `gcc`, `rustc`, and `cargo` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. The flake does not provide Python ([D-0044](decisions.md#d-0044-python-out-of-the-flake), [P-0044](pitfalls.md#p-0044-python-in-the-flake)). There is no `.venv`. A later third-party import gets a gitignored `.venv` from `uv`, and `pip` stays unused ([P-0029](pitfalls.md#p-0029-pip)). `cargo test` is the Core2 host check. `idf.py` is not in this shell ([D-0046](decisions.md#d-0046-core2-language)).
+The shell replaces `PATH`. Git, zsh, bash, CMake, Ninja, host `gcc`, the esp-rs `rustc`, and `cargo` are in the shell because agent commands and the terminal run inside it ([P-0013](pitfalls.md#p-0013-devshell-path)). There is no login banner. Python 3.13 is in the shell because the Core2 image build needs it. The hooks do not ([D-0044](decisions.md#d-0044-python-out-of-the-flake), [P-0044](pitfalls.md#p-0044-python-in-the-flake)). There is no `.venv`. A later third-party import gets a gitignored `.venv` from `uv`, and `pip` stays unused ([P-0029](pitfalls.md#p-0029-pip)). `cargo test` is the Core2 host check. `idf.py` is not in this shell ([D-0046](decisions.md#d-0046-core2-language)).
 
 The first run downloads the nixpkgs pin. Commit `flake.lock` when the repository starts taking commits, so later shells hit the same pin.
 
@@ -30,7 +30,13 @@ Stage `flake.nix` and `flake.lock` before the next `nix develop` if either file 
 
 ## Core2 image
 
-The image target is `xtensa-esp32-espidf`, and `firmware/.cargo/config.toml` pins ESP-IDF v5.5.6. This shell does not yet contain that Rust target or the v5.5.6 tree, so the image is not built here. Adding them is open ([roadmap](roadmap.md)). A passing `cargo test` is not that image ([P-0048](pitfalls.md#p-0048-core2-image-target)). This page does not name a port, a baud rate, or an offset.
+The image target is `xtensa-esp32-espidf`. `firmware/.cargo/config.toml` pins ESP-IDF v5.5.6 and builds the Xtensa standard library, because the esp-rs tarball does not ship it ([P-0049](pitfalls.md#p-0049-esp-rs-rustc)). Run this from `firmware/` so that config is the one Cargo reads:
+
+```sh
+cargo build --target xtensa-esp32-espidf
+```
+
+`embuild` clones ESP-IDF v5.5.6 into `firmware/.embuild/espressif` on that build. The tree is not a Nix package and is not Postern's v6.1 install. A passing `cargo test` is not that image ([P-0048](pitfalls.md#p-0048-core2-image-target)). `espflash` and `cargo-espflash` are in the shell. This page does not name a port, a baud rate, or an offset.
 
 ## Postern
 
@@ -107,5 +113,5 @@ The rules are reminders. The tracked text is this suite.
 ## What this phase does not do
 
 - It does not select a baud rate or a flash offset. The container nodes follow the host `ttyUSB*` and `ttyACM*` names. The Core2 on this bench is `/dev/ttyACM0`.
-- It does not flash a board by itself. The Core2 image target is not in this shell yet ([roadmap](roadmap.md)). A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)).
+- It does not flash a board by itself. `espflash` is in the shell. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)).
 - The host test does not need the chip toolchain.

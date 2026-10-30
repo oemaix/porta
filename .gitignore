@@ -6,6 +6,7 @@
 
 # Core2 build outputs. The Rust sources stay tracked.
 /firmware/target/
+/firmware/.embuild/
 /firmware/sdkconfig
 /firmware/sdkconfig.old
 /firmware/managed_components/

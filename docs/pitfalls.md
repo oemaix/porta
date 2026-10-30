@@ -240,7 +240,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite an activation script to one absolute path. Do not drop the host bind because a command already worked in the container.
-- **Why:** An ESP-IDF installer writes absolute paths into its activation script and virtualenv shebangs. Postern's v6.1 install does this, and Postern records the procedure ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). In the Porta devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, so a wrapper that expects them fails to set up the version. A snapshot taken while those paths are missing caches an empty version, and a later run keeps the empty value. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command. The container already has `/root/.espressif`, so the wrapper runs the real command there. A later v5.5.6 tree for the Core2 hits the same home split.
+- **Why:** An ESP-IDF installer writes absolute paths into its activation script and virtualenv shebangs. Postern's v6.1 install does this, and Postern records the procedure ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). In the Porta devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, so a wrapper that expects them fails to set up the version. A snapshot taken while those paths are missing caches an empty version, and a later run keeps the empty value. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command. The container already has `/root/.espressif`, so the wrapper runs the real command there. The Core2 image build does not install v5.5.6 into this home. `embuild` uses its workspace directory, `firmware/.embuild` ([P-0049](#p-0049-esp-rs-rustc)). `ESP_IDF_TOOLS_INSTALL_DIR=global` would put that tree here beside v6.1.
 
 ### P-0046 LCD rail and the microSD slot
 
@@ -252,7 +252,19 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat a passing `cargo test` as a flashed Core2 image.
-- **Why:** [D-0046](decisions.md#d-0046-core2-language). `cargo test` covers the panel, the commands, and the tone. The framework ban — not `idf.py`, not ESP-IDF v6.1, not an esp-hal image — is that decision. The Xtensa Rust target and the v5.5.6 tree are not in this shell yet. That gap is [roadmap](roadmap.md) status. This entry does not forbid adding them.
+- **Why:** [D-0046](decisions.md#d-0046-core2-language). `cargo test` covers the panel, the commands, and the tone. The framework ban — not `idf.py`, not ESP-IDF v6.1, not an esp-hal image — is that decision. The shell's esp-rs rustc can compile `xtensa-esp32-espidf` ([P-0049](#p-0049-esp-rs-rustc)). That compile is the image. The host test is not.
+
+### P-0049 esp-rs rustc
+
+- **Status:** Open
+- **Avoid:** Do not build the Core2 image with the nixpkgs `rustc`. Do not move the esp-rs tarball off 1.95.0.0 while this nixpkgs pin still ships rustc 1.95.0. Do not import [leighleighleigh/esp-rs-nix](https://github.com/leighleighleigh/esp-rs-nix), [newAM/esp-rs-nix](https://github.com/newAM/esp-rs-nix), or an ESP-IDF Nix flake. Do not set `ESP_IDF_TOOLS_INSTALL_DIR=global`. Do not commit `firmware/.embuild`.
+- **Why:** nixpkgs rustc 1.95.0 lists `xtensa-esp32-espidf` and then fails, because its LLVM has no Xtensa backend. The shell compiler is the esp-rs release [1.95.0.0](https://github.com/esp-rs/rust-build/releases/tag/v1.95.0.0), fetched by `nix/esp-rustc.nix`. It is a nightly, and the Xtensa standard library is not in that tarball, so the image build uses `build-std`. `ldproxy` and `espflash` are packages from this nixpkgs pin. That `espflash` package also installs `cargo-espflash`. The name `cargo-espflash` in nixpkgs is only an alias that refuses to evaluate. `embuild` clones ESP-IDF v5.5.6 on the image build into `firmware/.embuild/espressif`. That is the workspace default, so v5.5.6 does not share Postern's `~/.espressif/v6.1` tree ([P-0041](#p-0041-eim-home-install)). Python 3.13 is in the shell because that clone needs it ([D-0044](decisions.md#d-0044-python-out-of-the-flake)).
+
+### P-0050 IDF 5.5 SPI pin unions
+
+- **Status:** Open
+- **Avoid:** Do not import `esp_idf_svc::hal::prelude`. Do not set `mosi_io_num`, `miso_io_num`, `quadwp_io_num`, or `quadhd_io_num` as fields of `spi_bus_config_t`. Do not pass `SPI_DMA_CH_AUTO` to `spi_bus_initialize`.
+- **Why:** `esp-idf-hal` 0.47 dropped that prelude. Hertz values come from `esp_idf_svc::hal::units::FromValueType`. ESP-IDF v5.5 put the four SPI data pins in anonymous unions inside `spi_bus_config_t`, so bindgen names them `__bindgen_anon_1` through `__bindgen_anon_4`. `sclk_io_num` stays a direct field. The automatic DMA channel is `spi_common_dma_t_SPI_DMA_CH_AUTO`.
 
 ## Resolved
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-30
 
 ## Current status
 
@@ -33,7 +33,7 @@ Not in this phase: AirPlay, DLNA, auxiliary mode, the easier login, battery indi
 
 ## Still open for a hardware pass
 
-- [D-0046](decisions.md#d-0046-core2-language) is closed: the Core2 crate is Rust on ESP-IDF v5.5.6. The Xtensa ESP-IDF Rust target and the v5.5.6 tree are not in the Porta shell yet. Adding them is open. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). Postern stays on ESP-IDF v6.1.
+- [D-0046](decisions.md#d-0046-core2-language) is closed: the Core2 crate is Rust on ESP-IDF v5.5.6. The Porta shell carries the esp-rs rustc 1.95.0.0 ([P-0049](pitfalls.md#p-0049-esp-rs-rustc)). ESP-IDF v5.5.6 is cloned by `embuild` when the image is built. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). Postern stays on ESP-IDF v6.1.
 - [D-0029](decisions.md#d-0029-spotify-transport) is closed: cspot on the Core2. The tree uses the labelled tone stand-in until that library is linked ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). Catalog search is still later.
 - [D-0031](decisions.md#d-0031-board-link) and [D-0032](decisions.md#d-0032-i2s-format) are closed. Phase 1 still brings the boards up separately.
 - [D-0033](decisions.md#d-0033-power-architecture) stays open for the product. The prototypes accept a bench supply ([D-0043](decisions.md#d-0043-firmware-tree)). That supply is not a measured AXP192 limit. Wi-Fi and I2S may start before the measurement. Instability then is suspected there first ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).

@@ -22,7 +22,7 @@
 use esp_idf_svc::hal::delay::{FreeRtos, TickType};
 use esp_idf_svc::hal::i2c::{I2cConfig, I2cDriver};
 use esp_idf_svc::hal::peripherals::Peripherals;
-use esp_idf_svc::hal::prelude::*;
+use esp_idf_svc::hal::units::FromValueType;
 use esp_idf_svc::sys;
 
 use crate::board::{AXP192_ADDR, I2C_SCL_GPIO, I2C_SDA_GPIO};
@@ -90,7 +90,7 @@ pub fn panel_power() -> bool {
         }
     };
     let config = I2cConfig::new()
-        .baudrate(400.kHz().into())
+        .baudrate(400_u32.kHz().into())
         .sda_enable_pullup(true)
         .scl_enable_pullup(true);
     let mut i2c = match I2cDriver::new(
