@@ -1,8 +1,8 @@
 # Architecture
 
-Status: baseline · 2026-10-30
+Status: baseline · 2026-10-31
 
-Porta is two controllers. The Core2 v1.3 owns the UI, Wi-Fi, and the analog codec. The M5Stamp Pico owns Bluetooth transmission. They are not on the same module stack. The Stamp Pico sits on a Module Proto and is cabled to the Core2. The cable is [D-0031](decisions.md#d-0031-board-link). Levels, pull-ups, and the controller clock are the [Postern cable note](../postern/docs/cable.md).
+Porta is two controllers. The Core2 v1.3 owns the UI, Wi-Fi, and the analog codec. The M5Stamp Pico owns Bluetooth transmission. They are not on the same module stack. The Stamp Pico sits on a Module Proto and is cabled to the Core2. The cable is [D-0031](decisions.md#d-0031-board-link). Levels, pull-ups, and the controller clock are the [Postern cable note](https://github.com/oemaix/postern/blob/main/docs/cable.md).
 
 ```mermaid
 flowchart LR
@@ -26,15 +26,15 @@ flowchart LR
   stamp --> phones
 ```
 
-The cable between the Core2 and the Stamp Pico is specified in [D-0031](decisions.md#d-0031-board-link). Phase 1 still builds the two firmwares as separate prototypes ([D-0023](decisions.md#d-0023-separate-phase-1-prototypes)). The line-in path does not run through Spotify.
+The cable between the Core2 and the Stamp Pico is specified in [D-0031](decisions.md#d-0031-board-link). Phase 1 does not open it. Phase 2 is the first product use ([D-0023](decisions.md#d-0023-separate-phase-1-prototypes)). The line-in path does not run through Spotify.
 
 ## Hardware
 
 | Part | Role | Identification |
 | --- | --- | --- |
 | Core2 v1.3 | Host, screen, Wi-Fi, PMU | ESP32-D0WDQ6-V3, 16 MB flash, 8 MB PSRAM, AXP192, ILI9342C 320×240, FT6336U, NS4168, SPM1423, BMI270, BM8563. [D-0003](decisions.md#d-0003-host-board) |
-| Module Audio (M144) | 3.5 mm input and output | ES8388 at I2C `0x10`, controller MCU at `0x33`. TRS is mic only. TRRS is headphone plus mic. [D-0004](decisions.md#d-0004-analog-module) |
-| Module HMI | Wheel and buttons | STM32F030, I2C `0x41`. Button 1 is the encoder press, buttons 2 and 3 are the side buttons. [D-0005](decisions.md#d-0005-hmi-module) |
+| Module Audio (M144) | 3.5 mm input and output | ES8388 at I2C `0x10`, controller MCU at `0x33`. TRS is mic only. TRRS is headphone plus mic. Three WS2812C LEDs on the side show the playing source from phase 2. [D-0004](decisions.md#d-0004-analog-module), [D-0047](decisions.md#d-0047-module-audio-leds) |
+| Module HMI | Wheel and buttons | STM32F030, I2C `0x41`. The encoder press confirms, BtnA goes back, and BtnB is unbound. [D-0005](decisions.md#d-0005-hmi-module), [D-0009](decisions.md#d-0009-hmi-mapping) |
 | M5GO Bottom2 v1.3 (A014-C-V13) | Base when modules are stacked | 500 mAh cell, TP4057, BMI270, PDM mic. Replaces the Core2 battery bottom. [D-0006](decisions.md#d-0006-base) |
 | M5Stamp Pico | A2DP source | ESP32-PICO-D4, no PSRAM. [D-0007](decisions.md#d-0007-bluetooth-transmitter) |
 | Module Proto | Carrier for the Stamp Pico | Custom I2S and control wiring |
@@ -46,16 +46,22 @@ Vendor descriptions used for the identification:
 - [Module Audio](https://docs.m5stack.com/en/module/Module_Audio)
 - [Module HMI](https://docs.m5stack.com/en/module/Module_HMI)
 - [M5GO Bottom2 v1.3](https://docs.m5stack.com/en/base/Base_M5GO_Bottom2_v1.3)
+- [M5Stamp Pico](https://docs.m5stack.com/en/core/Stamp-Pico)
+- [Module Proto](https://docs.m5stack.com/en/module/Module_Proto)
+
+The schematic prints from those pages are stored in [schematics](hardware/schematics.md).
 
 ## Audio paths
 
 **Phase 1 player.** The Core2 is a Spotify Connect speaker ([D-0029](decisions.md#d-0029-spotify-transport)). cspot fetches the track over Wi-Fi, decodes it to PCM, and a Porta I2S sink clocks that PCM into Module Audio. Play, pause, and skip call the same session. The internal NS4168 speaker and SPM1423 microphone are not the product output. They share the codec pins and must be disabled ([P-0006](pitfalls.md#p-0006-internal-i2s)).
 
-**Phase 1 bridge.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. That image is the Postern submodule. It offers AAC-LC and falls back to SBC. SBC is the session that has to pass on the board before AAC is treated as done ([P-0003](pitfalls.md#p-0003-no-psram), [P-0024](pitfalls.md#p-0024-aac-source), [D-0045](decisions.md#d-0045-postern-image)).
+**Postern image.** A separate firmware on the Stamp Pico takes I2S and sends A2DP. That image is the Postern submodule. It offers AAC-LC and falls back to SBC. SBC is the session that has to pass on the board before AAC is treated as done ([P-0003](pitfalls.md#p-0003-no-psram), [P-0024](pitfalls.md#p-0024-aac-source), [D-0045](decisions.md#d-0045-postern-image)). The product connects and removes the headphone in phase 2.
 
-**Phase 2 line bridge.** The ES8388 ADC captures the TRS jack. Samples reach the Stamp Pico by the link in [D-0031](decisions.md#d-0031-board-link).
+**Phase 2 line source.** The ES8388 ADC captures the TRS jack. Samples can reach the Stamp Pico by the link in [D-0031](decisions.md#d-0031-board-link).
 
-**Phase 2 network receiver.** AirPlay 1 and DLNA terminate on the Core2 ([D-0036](decisions.md#d-0036-airplay-and-dlna)). AirPlay 1 arrives as ALAC. DLNA arrives as LPCM, WAV PCM, or ALAC. Playback uses the same I2S fan-out as the player: Module Audio and the Stamp Pico.
+**Phase 2 source lamps.** The STM32 on Module Audio drives three WS2812C LEDs. From this phase they follow the playing source, and they stay lit when the panel sleeps ([D-0047](decisions.md#d-0047-module-audio-leds)). Phase 1 does not write them.
+
+**Phase 3 network receiver.** AirPlay 1 and DLNA terminate on the Core2 ([D-0036](decisions.md#d-0036-airplay-and-dlna)). AirPlay 1 arrives as ALAC. DLNA arrives as LPCM, WAV PCM, or ALAC. Playback uses the same I2S fan-out as the player: Module Audio and, once phase 2 has opened it, the Stamp Pico.
 
 One clock master drives BCLK and LRCK. The other chips are slaves ([P-0017](pitfalls.md#p-0017-one-clock-master)). The rate is [D-0032](decisions.md#d-0032-i2s-format).
 
@@ -82,7 +88,7 @@ Module Audio's configuration A is the Core2 setting. Its bus drawing places I2S 
 
 ## Control
 
-Module HMI and Module Audio sit on the Core2 I2C bus. Known addresses: HMI `0x41`, audio MCU `0x33`, ES8388 `0x10`, AXP192 `0x34`, FT6336U `0x38`, BM8563 `0x51`. Re-scan the assembled stack before adding a device ([P-0007](pitfalls.md#p-0007-i2c-map)).
+Module HMI and Module Audio sit on the Core2 I2C bus. The HMI STM32 takes its power from M-Bus 5 V ([P-0055](pitfalls.md#p-0055-mbus-5v)). Known addresses: HMI `0x41`, audio MCU `0x33`, ES8388 `0x10`, AXP192 `0x34`, FT6336U `0x38`, BM8563 `0x51`. Re-scan the assembled stack before adding a device ([P-0007](pitfalls.md#p-0007-i2c-map)).
 
 The UI architecture is the action API in [ui design](ui-design.md). How that API sits among the Core2 components is [software](software.md).
 

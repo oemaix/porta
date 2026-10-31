@@ -1,6 +1,6 @@
 # Pitfalls
 
-Status: baseline · 2026-10-30
+Status: baseline · 2026-11-01
 
 Open entries are binding. Do not delete an entry. Mark it resolved, with the reason, when it stops applying. New entries take the next id and are added in the same change that discovered them.
 
@@ -12,7 +12,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not implement the Spotify player as librespot, as a browser inside the Core2, as the Web Playback SDK, as the partner embedded SDK, or as the unmodified upstream cspot snapshot.
-- **Why:** The Web Playback SDK plays in a browser and does not return PCM. librespot does not run on the ESP32. The embedded SDK is not a public download. The Connect path that does run here is [D-0029](decisions.md#d-0029-spotify-transport). A tone or a plain HTTP stream may stand in until that library is linked. Until then the status title is "Tone stand-in". Do not label the stand-in as Spotify, Connect, or a decoded track.
+- **Why:** The Web Playback SDK plays in a browser and does not return PCM. librespot does not run on the ESP32. The embedded SDK is not a public download. The Connect path that does run here is [D-0029](decisions.md#d-0029-spotify-transport). A tone or a plain HTTP stream may stand in until that library is linked. Until a credential blob is stored and Wi-Fi is up, the status title is "Tone stand-in". Do not label the stand-in as Spotify, Connect, or a decoded track. Host tests may feed a blob, a title, and PCM. The image links cspot and keeps the title "Tone stand-in" until Zeroconf stores a blob and Wi-Fi is up. Decoded PCM stays in the software player. The headphone jack is not clocked ([P-0060](#p-0060-cspot-image-link)).
 
 ### P-0002 One radio, two jobs
 
@@ -24,7 +24,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat AAC as the first Bluetooth codec to bring up on the Stamp Pico.
-- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. Postern records the same ban so that repository stands alone ([Postern P-0002](../postern/docs/pitfalls.md#p-0002-aac-first)). A linked encoder is not a passed session ([P-0024](#p-0024-aac-source)). Measure free heap on this board after SBC is stable. If AAC does not fit, record the numbers here and supersede the codec goal with a new decision.
+- **Why:** The Stamp Pico is an ESP32-PICO-D4 without PSRAM. An AAC encoder plus A2DP can exhaust RAM that SBC does not. [D-0007](decisions.md#d-0007-bluetooth-transmitter) requires SBC as the fallback that actually ships. Postern records the same ban so that repository stands alone ([Postern P-0002](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0002-aac-first)). A linked encoder is not a passed session ([P-0024](#p-0024-aac-source)). Measure free heap on this board after SBC is stable. If AAC does not fit, record the numbers here and supersede the codec goal with a new decision.
 
 ### P-0004 Stack mechanics
 
@@ -71,8 +71,8 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0012 Phase creep
 
 - **Status:** Open
-- **Avoid:** Do not implement AirPlay, DLNA, auxiliary mode, the easier login, battery UI, or the elaborated layout in phase 1.
-- **Why:** [D-0012](decisions.md#d-0012-phase-split). Those items have open decisions of their own. Landing them early freezes a guess.
+- **Avoid:** Do not implement phase 2 or phase 3 work in phase 1, and do not implement phase 3 work in phase 2.
+- **Why:** [D-0012](decisions.md#d-0012-phase-split). Phase 1 is Spotify Connect on the headphone jack and the basic UI. Phase 2 is Postern in the product, the TRS source, a simple power level, panel sleep, and the Module Audio status LEDs. Phase 3 is AirPlay, DLNA, the elaborated layout, the easier login, and auto power-off. Landing a later phase early freezes a guess. The blue LED pattern for AirPlay and DLNA is specified with the lamps and is not a reason to build those sources in phase 2 ([D-0047](decisions.md#d-0047-module-audio-leds)).
 
 ### P-0013 Devshell PATH
 
@@ -132,19 +132,19 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not treat an AAC encoder, or an AAC A2DP sink, as proof that the Stamp Pico can open an AAC A2DP source session.
-- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). ESP-IDF can register an AAC source endpoint beside a mandatory SBC endpoint. Postern links that encoder. A linked encoder is not a passed source session on this module, and the free heap after the Bluetooth stack is up has not been measured here. SBC is the session that has to pass ([P-0003](#p-0003-no-psram), [D-0007](decisions.md#d-0007-bluetooth-transmitter)). Postern records the same ban ([Postern P-0002](../postern/docs/pitfalls.md#p-0002-aac-first)). Record the heap numbers here when that image is first flashed.
+- **Why:** SBC and AAC both encode 44.1 kHz and 48 kHz ([D-0032](decisions.md#d-0032-i2s-format)). ESP-IDF can register an AAC source endpoint beside a mandatory SBC endpoint. Postern links that encoder. A linked encoder is not a passed source session on this module, and the free heap after the Bluetooth stack is up has not been measured here. SBC is the session that has to pass ([P-0003](#p-0003-no-psram), [D-0007](decisions.md#d-0007-bluetooth-transmitter)). Postern records the same ban ([Postern P-0002](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0002-aac-first)). Record the heap numbers here when that image is first flashed.
 
 ### P-0025 Grove 5 V
 
 - **Status:** Open
 - **Avoid:** Do not connect the red Grove wire to a GPIO or to the Stamp Pico's 3.3 V pin.
-- **Why:** Grove red is 5 V. ESP32 GPIOs are not 5 V tolerant. Signal wires in [D-0031](decisions.md#d-0031-board-link) are 3.3 V. A 5 V feed belongs only on a pin the Stamp Pico regulates, if that pin exists on the carrier. I2C pull-ups are the Core2 pair to 3.3 V, not this red wire ([Postern cable](../postern/docs/cable.md)).
+- **Why:** Grove red is 5 V. ESP32 GPIOs are not 5 V tolerant. Signal wires in [D-0031](decisions.md#d-0031-board-link) are 3.3 V. A 5 V feed belongs only on a pin the Stamp Pico regulates, if that pin exists on the carrier. I2C pull-ups are the Core2 pair to 3.3 V, not this red wire ([Postern cable](https://github.com/oemaix/postern/blob/main/docs/cable.md)).
 
 ### P-0026 cspot fork
 
 - **Status:** Open
 - **Avoid:** Do not vendor [feelfreelinux/cspot](https://github.com/feelfreelinux/cspot) at its last upstream snapshot. Do not flash [squeezelite-esp32](https://github.com/sle118/squeezelite-esp32) as the Porta firmware. Do not put cspot on the Stamp Pico.
-- **Why:** Upstream cspot does not build cleanly and its password login is declined. The fixes people are still playing through live in the [philippe44/cspot](https://github.com/philippe44/cspot) fork used by squeezelite-esp32. That firmware is a Squeezebox player. Porta takes the library and the command pattern only. cspot needs PSRAM. Integrators mark the fork GPL-3.0. Confirm the license file at the pinned commit before linking ([D-0029](decisions.md#d-0029-spotify-transport), [D-0037](decisions.md#d-0037-license)).
+- **Why:** Upstream cspot does not build cleanly and its password login is declined. The fixes people are still playing through live in the [philippe44/cspot](https://github.com/philippe44/cspot) fork used by squeezelite-esp32. That firmware is a Squeezebox player. Porta takes the library and the command pattern only. cspot needs PSRAM. The license file at commit `99e5c95ad6d862a1b7845dda81fd9c8233b45b9f` (2026-10-09) is GPL-3.0-or-later. The image links it, so the firmware binary is GPL-3.0 ([D-0029](decisions.md#d-0029-spotify-transport), [D-0037](decisions.md#d-0037-license), [P-0058](#p-0058-cspot-credentials)). The headphone jack is not clocked ([P-0060](#p-0060-cspot-image-link)).
 
 ### P-0029 pip
 
@@ -156,7 +156,7 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not replace the Stamp Pico with an ESP32-S3, C2, C3, C5, C6, C61, H2, or S2 module.
-- **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit. Postern records the same target ban ([Postern P-0010](../postern/docs/pitfalls.md#p-0010-not-an-s3)).
+- **Why:** ESP-IDF 6.1 lists Bluetooth Classic only on the original ESP32. The S3 and the C/H parts are Bluetooth LE. A2DP needs Classic Bluetooth. Checked 2026-10-28. A module that keeps Classic Bluetooth and adds PSRAM is an ESP32-WROVER, not an S3 stamp. [D-0007](decisions.md#d-0007-bluetooth-transmitter) stays the Stamp Pico until a measurement says AAC does not fit. Postern records the same target ban ([Postern P-0010](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0010-not-an-s3)).
 
 ### P-0031 Ubuntu uid 1000
 
@@ -216,13 +216,13 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not commit `~/.espressif` or `~/.cache/espidf-nix`. Do not expect the Nix store to contain the Xtensa toolchain. Do not point an ESP-IDF install at an unpinned tag.
-- **Why:** Chip tools land under `~/.espressif`, not in the Nix store. The Porta devcontainer bind-mounts the login user's tree onto `/root/.espressif` ([D-0014](decisions.md#d-0014-devcontainer-base), [P-0032](#p-0032-container-uid)). Postern's shell is what currently fills that tree with v6.1, the first time its `idf.py` runs. Postern records that install on its own ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). A later Core2 image install of v5.5.6 uses the same home, and one tree must not be asked to satisfy two IDF versions without a recorded layout. In this image the path is `/root/.espressif`, because the session runs as root. On the host it is the login user's `~/.espressif`. `~/.cache/espidf-nix` is left in the container layer and is written again when an activation script is newer. Reloading the IDE keeps the container. Rebuilding it drops the writable layer. Copy `/root/.espressif` to the login user's home before the rebuild that adds the bind, or the new container hides the copy that exists only in the old layer.
+- **Why:** Chip tools land under `~/.espressif`, not in the Nix store. The Porta devcontainer bind-mounts the login user's tree onto `/root/.espressif` ([D-0014](decisions.md#d-0014-devcontainer-base), [P-0032](#p-0032-container-uid)). Postern's shell is what currently fills that tree with v6.1, the first time its `idf.py` runs. Postern records that install on its own ([Postern P-0031](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0031-install-home)). A later Core2 image install of v5.5.6 uses the same home, and one tree must not be asked to satisfy two IDF versions without a recorded layout. In this image the path is `/root/.espressif`, because the session runs as root. On the host it is the login user's `~/.espressif`. `~/.cache/espidf-nix` is left in the container layer and is written again when an activation script is newer. Reloading the IDE keeps the container. Rebuilding it drops the writable layer. Copy `/root/.espressif` to the login user's home before the rebuild that adds the bind, or the new container hides the copy that exists only in the old layer.
 
 ### P-0042 FHS namespace
 
 - **Status:** Open
 - **Avoid:** Do not add [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix) back to the Porta flake. Do not treat `SYS_ADMIN` and `seccomp=unconfined` on the Porta devcontainer as a Core2 build input. Do not remove those flags on the grounds that the Core2 crate calls `idf.py`. Do not replace a shell that still runs `idf.py` with an ESP-IDF flake pinned to an older nixpkgs.
-- **Why:** [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. `cargo test` does not need a mount namespace. The flags and the `~/.espressif` bind stay so this container can still run a shell that does, including Postern's `idf.py`. That command runs inside `buildFHSEnv` and needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. bubblewrap 0.12 uses `clone3`, which Docker's default seccomp profile rejects ([D-0014](decisions.md#d-0014-devcontainer-base)). A running container does not gain the flags until it is rebuilt. Postern records the same namespace trap for its own container ([Postern P-0032](../postern/docs/pitfalls.md#p-0032-fhs-namespace)). Dropping the Porta flags is a separate change.
+- **Why:** [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. `cargo test` does not need a mount namespace. The flags and the `~/.espressif` bind stay so this container can still run a shell that does, including Postern's `idf.py`. That command runs inside `buildFHSEnv` and needs a new mount namespace. A container that forbids it stops at `bwrap: Creating new namespace failed`. bubblewrap 0.12 uses `clone3`, which Docker's default seccomp profile rejects ([D-0014](decisions.md#d-0014-devcontainer-base)). A running container does not gain the flags until it is rebuilt. Postern records the same namespace trap for its own container ([Postern P-0032](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0032-fhs-namespace)). Dropping the Porta flags is a separate change.
 
 ### P-0043 Serial device node
 
@@ -234,13 +234,13 @@ Agents read this file before design or implementation work, and they add to it w
 
 - **Status:** Open
 - **Avoid:** Do not add `python3`, `python314`, `uv`, or `pip` to the Porta flake merely because a hook exists. Do not `pip install` for the image build.
-- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). The hooks are standard-library scripts started by the host `python3`. The Python inside an ESP-IDF install, and a flake package added because the Core2 image target needs it, are not this ban. Postern records the same policy for its flake ([Postern P-0028](../postern/docs/pitfalls.md#p-0028-python-in-the-flake)). `pip` stays out ([P-0029](#p-0029-pip)). A project `.venv` is created with `uv` on the day a Porta script imports a third-party package.
+- **Why:** [D-0044](decisions.md#d-0044-python-out-of-the-flake). The hooks are standard-library scripts started by the host `python3`. The Python inside an ESP-IDF install, and a flake package added because the Core2 image target needs it, are not this ban. Postern records the same policy for its flake ([Postern P-0028](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0028-python-in-the-flake)). `pip` stays out ([P-0029](#p-0029-pip)). A project `.venv` is created with `uv` on the day a Porta script imports a third-party package.
 
 ### P-0045 ESP-IDF install home
 
 - **Status:** Open
 - **Avoid:** Do not expect one `~/.espressif` tree to work under a different home. Do not rewrite an activation script to one absolute path. Do not drop the host bind because a command already worked in the container.
-- **Why:** An ESP-IDF installer writes absolute paths into its activation script and virtualenv shebangs. Postern's v6.1 install does this, and Postern records the procedure ([Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). In the Porta devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, so a wrapper that expects them fails to set up the version. A snapshot taken while those paths are missing caches an empty version, and a later run keeps the empty value. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command. The container already has `/root/.espressif`, so the wrapper runs the real command there. The Core2 image build does not install v5.5.6 into this home. `embuild` uses its workspace directory, `firmware/.embuild` ([P-0049](#p-0049-esp-rs-rustc)). `ESP_IDF_TOOLS_INSTALL_DIR=global` would put that tree here beside v6.1.
+- **Why:** An ESP-IDF installer writes absolute paths into its activation script and virtualenv shebangs. Postern's v6.1 install does this, and Postern records the procedure ([Postern P-0031](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0031-install-home)). In the Porta devcontainer that home is `/root` ([P-0032](#p-0032-container-uid)). The bind stores those files in the login user's `~/.espressif` ([P-0041](#p-0041-eim-home-install)). On the host the `/root` paths are not that tree, so a wrapper that expects them fails to set up the version. A snapshot taken while those paths are missing caches an empty version, and a later run keeps the empty value. When the user's tree exists and `/root/.espressif` does not, the wrapper bind-mounts the tree at `/root/.espressif` for that command. The container already has `/root/.espressif`, so the wrapper runs the real command there. The Core2 image build does not install v5.5.6 into this home. `embuild` uses its workspace directory, `firmware/.embuild` ([P-0049](#p-0049-esp-rs-rustc)). `ESP_IDF_TOOLS_INSTALL_DIR=global` would put that tree here beside v6.1.
 
 ### P-0046 LCD rail and the microSD slot
 
@@ -266,6 +266,114 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not import `esp_idf_svc::hal::prelude`. Do not set `mosi_io_num`, `miso_io_num`, `quadwp_io_num`, or `quadhd_io_num` as fields of `spi_bus_config_t`. Do not pass `SPI_DMA_CH_AUTO` to `spi_bus_initialize`.
 - **Why:** `esp-idf-hal` 0.47 dropped that prelude. Hertz values come from `esp_idf_svc::hal::units::FromValueType`. ESP-IDF v5.5 put the four SPI data pins in anonymous unions inside `spi_bus_config_t`, so bindgen names them `__bindgen_anon_1` through `__bindgen_anon_4`. `sclk_io_num` stays a direct field. The automatic DMA channel is `spi_common_dma_t_SPI_DMA_CH_AUTO`.
 
+### P-0051 Main task stack
+
+- **Status:** Open
+- **Avoid:** Do not leave `CONFIG_ESP_MAIN_TASK_STACK_SIZE` at the ESP-IDF default of 3584. Do not paint the 320×240 frame, or call `spi_bus_initialize`, on that stack. Do not keep a generated `firmware/sdkconfig` after changing `sdkconfig.defaults`.
+- **Why:** `firmware_main` runs on the main task. After `panel supply on`, the SPI bus setup and the first paint overflow 3584 bytes. The panic is `A stack overflow in task main`, then `rst:0xc (SW_CPU_RESET)`, and the chip repeats that forever. The Core2 image sets the main task stack to 16384 in `sdkconfig.defaults`. `esp-idf-sys` loads a generated `firmware/sdkconfig` after that file, so a leftover copy that still says 3584 wins. That file is gitignored. Delete it before the image build.
+
+### P-0052 One I2C driver
+
+- **Status:** Open
+- **Avoid:** Do not call `Peripherals::take` again after the panel supply. Do not drop the I2C driver at the end of `panel_power`.
+- **Why:** The AXP192, the FT6336U, and the Module HMI share GPIO21 and GPIO22. `Peripherals::take` succeeds once. The driver opened for the panel rails has to stay open so the main loop can read the wheel, the side keys, and the touch controller.
+
+### P-0053 Panel frame
+
+- **Status:** Open
+- **Avoid:** Do not decide the color of every pixel in Rust. Do not keep the 320×240 frame on the main-task stack. Do not DMA that frame straight from PSRAM on SPI3.
+- **Why:** A per-pixel walk in the debug image took 16 seconds and blocked the touch poll. The frame is 150 KB in PSRAM. Blocks and glyphs are filled as areas. This ESP32's SPI3, the LCD bus, cannot DMA from PSRAM, so each paint copies the frame out through an internal DMA band. A paint runs only when the picture changed.
+
+### P-0054 HMI clock stretch
+
+- **Status:** Open
+- **Avoid:** Do not leave the internal I2C stretch timeout at the legacy driver's default of about ten bus cycles. Do not clock the Module HMI at 400 kHz. Do not replace `I2cDriver` with `driver/i2c_master.h` to silence the old-driver warning.
+- **Why:** The HMI STM32 holds SCL while it answers. The AXP192 and the FT6336U do not, so a working touch does not prove the wheel can answer. The default window is about 25 µs at 400 kHz. With `scl=1`, the encoder read at `0x00` succeeded and a 3-byte read at `0x20` returned `ESP_ERR_TIMEOUT`. The encoder read after that timed out as well, and the touch stopped. Buttons are one byte each (`0x20`, `0x21`, `0x22`). One HMI register per sample. The stretch window is 12 ms. `esp-idf-hal` 0.47 still calls `i2c_driver_install`. The warning is that call. A NACK is `ESP_FAIL` and is the absent module ([P-0055](#p-0055-mbus-5v)). Pin levels are [P-0056](#p-0056-hmi-holds-the-bus).
+
+### P-0055 M-Bus 5 V
+
+- **Status:** Open
+- **Avoid:** Do not read the Module HMI before the M-Bus 5 V path is on. Do not write AXP192 REG 0x30 to get there. Do not treat that path as the measured current limit or as a choice of pack.
+- **Why:** The STM32 on the module is powered from M-Bus 5 V. The AXP192 and the FT6336U are on the Core2 board, so the touch answers while `0x41` NACKs (`ESP_FAIL`). With USB above VHOLD the board passes USB 5 V onto the bus and the boost stays off. Otherwise GPIO0 holds N_VBUSEN and EXTEN runs the boost. That is the M5Core2 `SetBusPowerMode` split. Eighty milliseconds after the rail the address still NACKed and was absent from a scan (`0x10`, `0x33`, `0x34`, `0x38`, `0x51`, `0x68`). It ACKed about 700 ms later. The LED clear retries for a second before that scan. This does not close [D-0033](decisions.md#d-0033-power-architecture) and does not set [P-0040](#p-0040-unmeasured-rail).
+
+### P-0056 HMI holds the bus
+
+- **Status:** Open
+- **Avoid:** Do not clock GPIO21 and GPIO22 open-drain and then treat a later AXP192 timeout as proof the module is holding SCL. Do not treat one failed AXP192 read after a flash as a dead PMIC.
+- **Why:** Read the two pins as inputs before `I2cDriver::new` and log `i2c levels`. SCL low means a slave is holding the line. The module cell keeps the STM32 up across an ESP32 reset, so unplug the module from the bus. SCL high means the line is free. The timeouts at 4 ms and 12 ms happened with no timeout interrupt and were the stretch register, not a held line ([P-0054](#p-0054-hmi-clock-stretch)).
+
+### P-0057 Encoder counts
+
+- **Status:** Open
+- **Avoid:** Do not move focus once for every change of the HMI encoder count.
+- **Why:** Twenty clicks in one direction moved the count by 80, so one click is four counts. Readings during the click are the intermediate counts, not extra clicks. Focus moves once when four counts have arrived, without waiting for the count to rest. A rising count on this module moves focus to the previous block.
+
+### P-0058 cspot credentials
+
+- **Status:** Open
+- **Avoid:** Do not link cspot without a Spotify client id and secret supplied outside this tree. Do not copy them out of a squeezelite-esp32 binary. Do not replace `firmware_main` with cspot's `app_main`. Do not `pip install` the nanopb generator's dependencies.
+- **Why:** `philippe44/cspot` at `99e5c95ad6d862a1b7845dda81fd9c8233b45b9f` is GPL-3.0-or-later ([P-0026](#p-0026-cspot-fork)). Its `client_Info.h` is a placeholder. Since December 2025 Spotify requires a dedicated client id and secret, and the phone has to reach the Core2 on Wi-Fi. Those values, and the bench SSIDs, live in a gitignored `.env` at the repo root. `env.example` shows the keys. The image reads that file at compile time. The checkout of that commit is a gitignored tree at `firmware/third_party/cspot`, so a fresh clone does not link until that tree is there. The tone stand-in stays until Zeroconf ([P-0001](#p-0001-spotify-on-the-esp32)). The Connect name in that file is `porta`. The headphone jack is not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0059 Module Audio LEDs
+
+- **Status:** Open
+- **Avoid:** Do not write Module Audio register `0xF0` when the status color changes. Do not raise RGB brightness above the module default of 10. Do not animate the lamps. Do not show the Spotify color for the tone stand-in. Do not use the Module HMI LEDs for source status. Do not write a guessed LED current into the tree and call it a measurement.
+- **Why:** `0xF0` erases the STM32 flash, about 20 ms, and the vendor protocol asks that this stay rare. Saved fields are microphone config, headphone mode, and brightness, not the live color. Brightness is 0–100 and defaults to 10. The Arduino sample sets 100. That sample is not this product ([D-0047](decisions.md#d-0047-module-audio-leds)). The tone stand-in is not Spotify ([P-0001](#p-0001-spotify-on-the-esp32)). The HMI LEDs have no assigned meaning. The vendor's 23.53 mA operating figure is the whole module at 3.3 V. It is not the LED budget on this stack ([P-0040](#p-0040-unmeasured-rail)).
+
+### P-0060 cspot image link
+
+- **Status:** Open
+- **Avoid:** Do not point nanopb's protoc plugin at the ESP-IDF Python. Do not turn Wi-Fi IRAM optimization back on while cspot is linked. Do not let civetweb define `timegm`. Do not drop the wide-character stubs. Do not compile `OPUSDecoder.cpp` while Opus is off. Do not treat a linked image as sound on the headphone jack.
+- **Why:** The IDF venv is first on `PATH` and has no `google.protobuf`. The shell Python's protobuf 7 removed `reflection.MakeClass`, which nanopb 0.4.6 calls. Wi-Fi in IRAM plus cspot overflowed `iram0_0_seg`. civetweb's `timegm` collides with the one in `esp-idf-svc`. The PSRAM `libstdc++` references wide-character helpers this newlib port does not provide, and those stubs have to be pulled in from `porta_connect_start` or the linker never sees them. Bell's source glob compiles the Opus decoder even when the option is off. The linked image decodes into the software player. It does not clock I2S or the ES8388.
+
+### P-0061 Station association
+
+- **Status:** Open
+- **Avoid:** Do not leave the station PMF-incapable. Do not set the auth threshold to WPA2 only. Do not start cspot before the interface has an address. Do not leave the panel on the frame painted before `join`.
+- **Why:** The client configuration defaults to no PMF, and many access points refuse that station. `WPA2Personal` is a minimum of WPA2, so a WPA network never matches. A timed-out attempt can reject the next configuration until the station disconnects. The first paint is before `join`, and a step that ignores the association, the session, and the title never draws the result. cspot's announcement needs that address. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0062 Wi-Fi task memory
+
+- **Status:** Open
+- **Avoid:** Do not call `esp_wifi_init` with `wifi_task_stack_size` left at 0. `EspWifi::new` in esp-idf-svc 0.53 fills that field from `Default`. Do not raise the 40 KB reserve because a free-heap log still shows a large internal block: that carve already succeeded. Do not let a fresh sdkconfig pick 16 static TX buffers and 32 cache TX buffers. `SPIRAM_TRY_ALLOCATE_WIFI_LWIP` hides dynamic TX, and those counts are the fallback. Do not let the static RX count or the RX BA window rise to the PSRAM defaults of 16 while the panel holds its DMA bounce buffer. Do not shrink the 40 KB reserve below the bounce buffer, six RX buffers, and the Wi-Fi task. Do not turn Wi-Fi IRAM optimization back on. Do not enable WPA3 SAE for this station.
+- **Why:** A boot with 223 KB internal free and a 106 KB block still logged `create wifi task: failed to create task` and `wifi new ESP_ERR_NO_MEM`. The task is created before the TX buffers. A stack size of 0 makes that create allocate nothing and return the same error. The following `0x3001` is cleanup of an init that never finished. The same option that moves driver chunks to PSRAM also selects static TX, about 1.6 KB of DMA each. Eight static buffers and sixteen cache buffers stay in the DMA heap after the 10 KB panel bounce ([P-0053](#p-0053-panel-frame)). `esp_psram_extram_reserve_dma_pool` calls `abort` when the carve fails. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0063 Wi-Fi release wait
+
+- **Status:** Open
+- **Avoid:** Do not call `BlockingWifi::disconnect`, `stop`, or `start` while joining. Those waits have no deadline.
+- **Why:** A missed driver event leaves the panel on "Joining Wi-Fi" and the later SSIDs are never tried. The release path polls for at most two seconds and then moves on.
+
+### P-0064 cspot task stack
+
+- **Status:** Open
+- **Avoid:** Do not leave `CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM` unset while bell allocates task stacks with `MALLOC_CAP_SPIRAM`. Do not move the cspot, track-queue, or player stacks into internal RAM to satisfy the assert. Do not put the Wi-Fi task stack in PSRAM.
+- **Why:** After the station has an address, `porta_connect_start` builds a `bell::Task` with a 32 KB PSRAM stack. `xTaskCreateStaticPinnedToCore` asserts `xPortcheckValidStackMem` and the panic reboot-loops. The track queue is another 32 KB, the player 48 KB, and the Mercury dispatcher 4 KB. Those four do not fit beside the panel bounce and the Wi-Fi buffers ([P-0062](#p-0062-wi-fi-task-memory)). The Wi-Fi task stays internal. On this ESP32 a PSRAM stack must not be the one that runs while the cache is off; the Wi-Fi task is that one. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0065 Connect announcement
+
+- **Status:** Open
+- **Avoid:** Do not call `mdns_service_add` while the mDNS hostname is still null. Bell's register ignores that error. Do not leave the station hostname at the IDF default `espressif`. Do not put spaces or capitals into that hostname. The Spotify name may have them. The hostname is the DNS label. Do not send the cJSON zeroconf body with `deviceType` equal to the word `deviceType`. Do not patch the gitignored cspot tree to change that string.
+- **Why:** The router lease shows `espressif` because that is `CONFIG_LWIP_LOCAL_HOSTNAME`. Spotify does not list DHCP names. An iPad or a desktop in the phone's device list is an account client. Porta is a local `_spotify-connect._tcp` service. `mdns_init` leaves the hostname null, and `mdns_service_add` then returns `ESP_ERR_INVALID_ARG`. The log still says the server is waiting. The cJSON getInfo body also writes `"deviceType":"deviceType"` instead of `SPEAKER`, and it omits `spotifyError`. The app drops that speaker. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0066 Postern doc links
+
+- **Status:** Open
+- **Avoid:** Do not link a Porta markdown file into Postern with a relative path (`postern/...` or `../postern/...`).
+- **Why:** `postern/` is a git submodule of `https://github.com/oemaix/postern.git`, branch `main` ([P-0028](#p-0028-postern-file-url)). GitHub resolves a relative link inside the Porta tree, and those files are not in that tree. A citation of a Postern file uses `https://github.com/oemaix/postern/blob/main/` plus the path and anchor. A checkout path written as text, such as `postern/components/postern`, still names the directory in this clone.
+
+### P-0067 Civetweb thread argument
+
+- **Status:** Open
+- **Avoid:** Do not pass the address of a stack local as the civetweb FreeRTOS task argument. The entry reads `entry_func` from that struct only after the starter blocks, and by then the local is gone. Do not put the civetweb stack in PSRAM. Do not leave `num_threads` at 4. Each stack is 16 KB of internal RAM, and one worker is the pair with the master. Do not let an uncaught cspot exception reach `std::terminate`. Do not treat a POST body as a login until `userName`, `blob`, and `clientKey` are present and the body was read in full. A body longer than 12 KB is refused.
+- **Why:** The ESP starter in this cspot checkout stored the thread function in a local `cw_freertos_handle` and passed its address to `xTaskCreateStaticPinnedToCore`. The new task is pinned to core 1, the same core as the cspot task, so it waits until that task blocks. The local is already dead. The fetch is a garbage address (`PC 0x000fffff`, `InstrFetchProhibited`) and the chip reboot-loops. A failed read of the access-point hello throws from `PlainConnection::readBlock`. Nothing caught it, so `std::terminate` aborted and rebooted. The task now tries the access point three times and then waits for another login. The image build rejects the old starter and a PSRAM civet stack. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
+### P-0068 Spotify Diffie-Hellman length
+
+- **Status:** Open
+- **Avoid:** Do not leave `CONFIG_MBEDTLS_HARDWARE_MPI` set. Do not use `CONFIG_MBEDTLS_LARGE_KEY_SOFTWARE_MPI` as the substitute. That fallback runs only above 4096 bits.
+- **Why:** Spotify's prime is 768 bits, 24 words. The ESP32 accelerator rounds the length up to the next 512-bit block, 1024 bits, and zero-fills the rest. The public key is not a valid element. The access point accepts the TCP connection and then closes it. `readBlock` throws `Error in read` before `Received APHello response`. The software bignum keeps the 768-bit length. The jack is still not clocked ([P-0060](#p-0060-cspot-image-link)).
+
 ## Resolved
 
 ### P-0009 Unbound HMI button
@@ -277,8 +385,8 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0020 No toolchain yet
 
 - **Status:** Resolved
-- **Avoid:** Superseded for the Core2 by [D-0046](decisions.md#d-0046-core2-language), and for the Stamp Pico by [Postern D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell). The old note that the Porta shell installs v6.1 through EIM no longer applies.
-- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. The Core2 image is Rust on ESP-IDF v5.5.6. An ESP-IDF Nix flake pinned to an older nixpkgs stays out of either shell. Postern's shell installs v6.1 through EIM and records that ban itself ([Postern P-0006](../postern/docs/pitfalls.md#p-0006-idf-flake)).
+- **Avoid:** Superseded for the Core2 by [D-0046](decisions.md#d-0046-core2-language), and for the Stamp Pico by [Postern D-0022](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0022-idf-in-the-shell). The old note that the Porta shell installs v6.1 through EIM no longer applies.
+- **Resolution:** [D-0028](decisions.md#d-0028-firmware-framework) selected ESP-IDF. Arduino and PlatformIO stay out. [D-0046](decisions.md#d-0046-core2-language) removed `idf.py` from the Porta shell. The Core2 image is Rust on ESP-IDF v5.5.6. An ESP-IDF Nix flake pinned to an older nixpkgs stays out of either shell. Postern's shell installs v6.1 through EIM and records that ban itself ([Postern P-0006](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0006-idf-flake)).
 
 ### P-0021 Blackberry pixels
 
@@ -307,5 +415,5 @@ Agents read this file before design or implementation work, and they add to it w
 ### P-0047 Postern image
 
 - **Status:** Resolved
-- **Avoid:** Superseded by [D-0045](decisions.md#d-0045-postern-image). The old second sentence, "do not run `idf.py` inside `postern/components/postern`", is [Postern P-0030](../postern/docs/pitfalls.md#p-0030-reuse-directory) and stays in that repository.
-- **Resolution:** Do not add a Stamp Pico application in this repository. [D-0045](decisions.md#d-0045-postern-image) is that rule, stated here so a Porta checkout does not depend on opening Postern to know it. Postern's one-image rule is [Postern P-0034](../postern/docs/pitfalls.md#p-0034-one-image).
+- **Avoid:** Superseded by [D-0045](decisions.md#d-0045-postern-image). The old second sentence, "do not run `idf.py` inside `postern/components/postern`", is [Postern P-0030](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0030-reuse-directory) and stays in that repository.
+- **Resolution:** Do not add a Stamp Pico application in this repository. [D-0045](decisions.md#d-0045-postern-image) is that rule, stated here so a Porta checkout does not depend on opening Postern to know it. Postern's one-image rule is [Postern P-0034](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0034-one-image).

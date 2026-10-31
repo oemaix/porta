@@ -12,7 +12,7 @@ The image target is `xtensa-esp32-espidf`. `firmware/.cargo/config.toml` pins ES
 cargo build --target xtensa-esp32-espidf
 ```
 
-`embuild` clones that ESP-IDF tree into `.embuild/` on the build ([P-0049](../docs/pitfalls.md#p-0049-esp-rs-rustc)). A passing `cargo test` is not a flashed image ([P-0048](../docs/pitfalls.md#p-0048-core2-image-target)). The tree powers the panel and paints Now Playing. It has not started Wi-Fi or the codec yet ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
+`embuild` clones that ESP-IDF tree into `.embuild/` on the build ([P-0049](../docs/pitfalls.md#p-0049-esp-rs-rustc)). A passing `cargo test` is not a flashed image ([P-0048](../docs/pitfalls.md#p-0048-core2-image-target)). The tree powers the panel and M-Bus 5 V, paints Now Playing from a PSRAM frame, and polls the HMI and the touch controller. It has not started Wi-Fi or the codec yet ([D-0043](../docs/decisions.md#d-0043-firmware-tree)).
 
 Phase 1 behavior that the host test covers:
 

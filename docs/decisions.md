@@ -1,6 +1,6 @@
 # Decisions
 
-Status: baseline · 2026-10-30
+Status: baseline · 2026-10-31
 
 Ids are `D-xxxx`. They are not reused and not renumbered. A later change supersedes an id by pointing at a new one. Status is **Decided** or **Undecided**. A recommendation under an open id is not a decision.
 
@@ -16,7 +16,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0006](#d-0006-base) | Decided | Stacked base is M5GO Bottom2 v1.3 |
 | [D-0007](#d-0007-bluetooth-transmitter) | Decided | Stamp Pico transmits Bluetooth, AAC then SBC |
 | [D-0008](#d-0008-radio-split) | Decided | Wi-Fi on the Core2, A2DP on the Stamp Pico |
-| [D-0009](#d-0009-hmi-mapping) | Decided | Scroll selects, press confirms, button 2 goes back |
+| [D-0009](#d-0009-hmi-mapping) | Decided | Scroll selects, press confirms, BtnA goes back |
 | [D-0010](#d-0010-interaction-model) | Decided | One action model; the wheel is primary |
 | [D-0011](#d-0011-visual-language) | Decided | Flat color blocks, not a retro skin |
 | [D-0012](#d-0012-phase-split) | Decided | Phase contents follow the roadmap note |
@@ -33,7 +33,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0023](#d-0023-separate-phase-1-prototypes) | Decided | Phase 1 player and bridge stay separate |
 | [D-0024](#d-0024-editor-extensions) | Decided | Required extensions, including rust-analyzer |
 | [D-0025](#d-0025-microsd-in-phase-1) | Decided | microSD is unused in phase 1 |
-| [D-0026](#d-0026-second-hmi-button) | Undecided | Side button index 3 |
+| [D-0026](#d-0026-second-hmi-button) | Undecided | HMI BtnB |
 | [D-0027](#d-0027-microsd-purpose) | Undecided | Config store is a candidate; offline Spotify is not |
 | [D-0028](#d-0028-firmware-framework) | Decided | Superseded for the Core2 by D-0046; Postern stays on v6.1 |
 | [D-0029](#d-0029-spotify-transport) | Decided | Core2 is a Connect speaker via cspot |
@@ -54,6 +54,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 | [D-0044](#d-0044-python-out-of-the-flake) | Decided | No project Python in the flake; a later `.venv` uses `uv` |
 | [D-0045](#d-0045-postern-image) | Decided | The Postern submodule is the Stamp Pico image |
 | [D-0046](#d-0046-core2-language) | Decided | Core2 is Rust on ESP-IDF v5.5.6; Postern stays v6.1 |
+| [D-0047](#d-0047-module-audio-leds) | Decided | Module Audio's three RGB LEDs show the playing source |
 
 ## Decided
 
@@ -116,9 +117,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0009 HMI mapping
 
 - **Status:** Decided
-- **Choice:** Wheel rotation moves the selection. Wheel press confirms. HMI button index 2 is a single Back action. The note's words cancel, back, and up are that one action: leave the current screen for its parent. On the root screen it does not open a hidden command.
-- **Source:** `ui.txt`, plus a reasonable completion that "one button" is button index 2 (the first side button in the vendor API). Button index 3 stays open as [D-0026](#d-0026-second-hmi-button).
-- **Consequence:** Firmware may swap index 2 and 3 only by superseding this id.
+- **Choice:** Wheel rotation moves the selection. The encoder switch S confirms. BtnA is a single Back action. The note's words cancel, back, and up are that one action: leave the current screen for its parent. On the root screen it does not open a hidden command. BtnB stays open as [D-0026](#d-0026-second-hmi-button).
+- **Source:** `ui.txt`. The module silkscreen names the encoder switch S, the side keys BtnA (PA.3) and BtnB (PA.4). The vendor registers are `0x20` S, `0x21` BtnA, `0x22` BtnB, in that order.
+- **Consequence:** The three glass buttons under the panel stay unbound until a screen draws their labels ([D-0034](#d-0034-screen-buttons)). A press on an unbound key is ignored.
+- **History:** On 2026-10-31 Back moved off the guessed first side key. That guess had called it button index 2. The silkscreen name of that key is BtnB. On 2026-11-01 Back moved to BtnA, register `0x21`, at the listener's request. BtnB, register `0x22`, is the open key.
 
 ### D-0010 Interaction model
 
@@ -126,20 +128,22 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** Wheel, touch, and the three screen buttons emit one action set: focus next, focus previous, activate, back. The wheel is the primary control. A touch on an unfocused block moves focus. A touch on the focused block activates it.
 - **Source:** Reasonable completion of the Blackberry wheel grammar in `ui.txt` together with a touchscreen that must stay intuitive.
 - **Consequence:** Screens are not touch-only and not wheel-only. See [P-0011](pitfalls.md#p-0011-one-navigation-model).
+- **History:** On 2026-11-01 a tap on the focused transport or volume block uses the third under the finger. The middle runs the block. The left and right thirds are the chevron actions. The wheel still moves focus.
 
 ### D-0011 Visual language
 
 - **Status:** Decided
 - **Choice:** The screen is a modern, simple layout of color blocks with large targets on 320×240. It does not imitate a Blackberry, a phone home screen, or a desktop window.
 - **Source:** `ui.txt`.
-- **Consequence:** Phase 2 may add density. It does not replace the block model. Colors themselves are [D-0035](#d-0035-palette).
+- **Consequence:** Phase 3 may add density. It does not replace the block model. Colors themselves are [D-0035](#d-0035-palette).
 
 ### D-0012 Phase split
 
 - **Status:** Decided
-- **Choice:** Phase 1 is the Stamp Pico I2S-to-Bluetooth bridge, the Core2 Wi-Fi-to-I2S player, and a simple complete UI with a real UI API and a working HMI. Phase 2 is the elaborated UI, auxiliary bridge modes, easier login, and battery level plus low-battery power-off.
-- **Source:** `readmap.txt`.
-- **Consequence:** AirPlay and DLNA belong to phase 2 because `what.txt` requires them and `readmap.txt` places bridge features after phase 1. See [D-0023](#d-0023-separate-phase-1-prototypes).
+- **Choice:** Phase contents follow [roadmap](roadmap.md). Phase 1 is Spotify Connect on the headphone jack, with Wi-Fi, on the basic UI. Phase 2 brings Postern into the product, adds the TRS source, a simple power level, panel sleep that leaves audio running, and Module Audio LEDs that show the playing source. Phase 3 is AirPlay 1, DLNA, the elaborated layout, the easier login, and auto power-off.
+- **History:** Until 2026-10-31, phase 1 also included the Stamp Pico bridge as its own prototype, and phase 2 held AirPlay, DLNA, the elaborated UI, the easier login, and battery level plus low-battery power-off together. On 2026-10-31 the Module Audio status LEDs joined phase 2 ([D-0047](#d-0047-module-audio-leds)). AirPlay and DLNA playback stay in phase 3. Their LED color is defined with the lamps and stays unused until then.
+- **Source:** `readmap.txt`, revised with the roadmap on 2026-10-31.
+- **Consequence:** AirPlay and DLNA stay required ([D-0036](#d-0036-airplay-and-dlna)) and land in phase 3. The Postern image can exist before phase 2. The product does not control it until then ([D-0023](#d-0023-separate-phase-1-prototypes)).
 
 ### D-0013 Build entry
 
@@ -215,9 +219,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0023 Separate phase 1 prototypes
 
 - **Status:** Decided
-- **Choice:** In phase 1 the Core2 player and the Stamp Pico bridge are separate programs. The product behaviour that feeds the player into Bluetooth, and the line-in bridge, is phase 2 auxiliary mode.
-- **Source:** `readmap.txt` lists the bridge and the player as separate phase 1 bullets, and lists auxiliary mode under phase 2.
-- **Consequence:** Phase 1 can pass UC-02 without the Core2 UI controlling the Stamp Pico.
+- **Choice:** In phase 1 the Core2 player and the Stamp Pico bridge are separate programs. Postern is not connected, started, or fed from this image. Connecting and removing a Bluetooth headphone, and sending the player or the TRS jack across the cable, is phase 2.
+- **History:** Until 2026-10-31 the bridge itself was a phase 1 prototype, and phase 1 could pass UC-02 without the Core2 UI controlling the Stamp Pico.
+- **Source:** `readmap.txt` listed the bridge and the player as separate phase 1 bullets. The roadmap of 2026-10-31 moves the product use of that bridge to phase 2. The Postern image is already written in the submodule.
+- **Consequence:** Phase 1 exits without a Bluetooth session. UC-02 is a phase 2 case.
 
 ### D-0024 Editor extensions
 
@@ -236,10 +241,10 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0028 Firmware framework
 
 - **Status:** Decided
-- **Choice:** Superseded for the Core2 by [D-0046](#d-0046-core2-language). The Stamp Pico image stays on ESP-IDF v6.1. Its shell is the Postern submodule, which provides `idf.py` from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), built with this nixpkgs pin, and installs the chip tools through Espressif's Installation Manager. Arduino and PlatformIO are not used. Postern records the same shell as [D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell).
+- **Choice:** Superseded for the Core2 by [D-0046](#d-0046-core2-language). The Stamp Pico image stays on ESP-IDF v6.1. Its shell is the Postern submodule, which provides `idf.py` from [hnaderi/espidf-nix](https://github.com/hnaderi/espidf-nix), built with this nixpkgs pin, and installs the chip tools through Espressif's Installation Manager. Arduino and PlatformIO are not used. Postern records the same shell as [D-0022](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0022-idf-in-the-shell).
 - **History:** The original choice put both chips on v6.1 and put `idf.py` in the Porta shell.
 - **Source:** Project decision, 2026-10-28, revised 2026-10-30. The Installation Manager documents Python 3.10, 3.11, 3.12, 3.13, and 3.14 ([prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html)). Postern's wrapper passes Python 3.13 from nixpkgs 26.05 into that installer.
-- **Consequence:** Postern's shell puts `idf.py` on `PATH` and installs the chip tools under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install), [Postern P-0031](../postern/docs/pitfalls.md#p-0031-install-home)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace), [Postern P-0032](../postern/docs/pitfalls.md#p-0032-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out of either shell.
+- **Consequence:** Postern's shell puts `idf.py` on `PATH` and installs the chip tools under `~/.espressif` ([P-0041](pitfalls.md#p-0041-eim-home-install), [Postern P-0031](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0031-install-home)). That command enters the install through bubblewrap, so it needs a mount namespace ([P-0042](pitfalls.md#p-0042-fhs-namespace), [Postern P-0032](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0032-fhs-namespace)). A devcontainer install records `/root` in that tree. On the host the shell binds the login user's copy there when that prefix is missing ([P-0045](pitfalls.md#p-0045-esp-idf-install-home)). A Nix flake pinned to an older nixpkgs stays out of either shell.
 
 ### D-0029 Spotify transport
 
@@ -247,7 +252,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** With a Spotify Premium account, the Core2 is a Connect speaker. It loads and decodes the audio itself. The phone is the remote that chooses the device and the music. Play, pause, next, previous, and volume on the Core2 call that same session. The Web API is only for later catalog actions such as search and starting a chosen playlist.
 - **Component:** [cspot](https://github.com/feelfreelinux/cspot), the C++ Connect library aimed at the ESP32. Vendor the fork that [squeezelite-esp32](https://github.com/sle118/squeezelite-esp32) still patches, [philippe44/cspot](https://github.com/philippe44/cspot), not the last upstream snapshot. Upstream fails to build and its username login is declined. squeezelite-esp32 is the reference for commands and track metadata (`components/spotify`). It is not the Porta application. Porta's own I2S sink feeds Module Audio. The PCM5102 sink in cspot is the shape of that adapter.
 - **Source:** Project decision, 2026-10-28. Connect speakers pull the track from Spotify. ESP Muse boards running this library were still playing in 2026, including after a December 2025 break that a squeezelite-esp32 update repaired.
-- **Consequence:** cspot needs PSRAM, so it runs on the Core2 only. The first login is Zeroconf from a Spotify app on the same network. Credentials are stored after that ([D-0030](#d-0030-login)). A tone is still allowed as a bring-up stand-in before cspot is linked, and it must be labelled as one. Integrators mark this fork GPL-3.0. Read the license file at the pinned commit before linking. If it is GPL-3.0, the firmware binary is GPL-3.0 and does not stay an Apache-2.0-only distribution ([D-0037](#d-0037-license), [P-0026](pitfalls.md#p-0026-cspot-fork)).
+- **Consequence:** cspot needs PSRAM, so it runs on the Core2 only. The first login is Zeroconf from a Spotify app on the same network. Credentials are stored after that ([D-0030](#d-0030-login)). A tone is still allowed as a bring-up stand-in before a Zeroconf blob is stored, and it must be labelled as one. The license file at `philippe44/cspot` commit `99e5c95ad6d862a1b7845dda81fd9c8233b45b9f` (2026-10-09) is GPL-3.0-or-later. The image links that commit, so the firmware binary is GPL-3.0 and is not an Apache-2.0-only distribution ([D-0037](#d-0037-license), [P-0026](pitfalls.md#p-0026-cspot-fork)). The client id, the client secret, and the bench SSIDs come from the gitignored `.env` ([P-0058](pitfalls.md#p-0058-cspot-credentials)). The station starts. The headphone jack is not clocked ([P-0060](pitfalls.md#p-0060-cspot-image-link)).
+- **History:** On 2026-10-31 the license file at that commit was read, and the image linked it. The jack still has no I2S clock.
 
 ### D-0031 Board link
 
@@ -264,7 +270,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
   | GND | — | Grove black | GND |
 
 - **Source:** The link type is a project decision, 2026-10-28. The pins are taken from the [Core2 v1.3 pin map](https://docs.m5stack.com/en/core/Core2_v1.3) and from the Grove colors on ExtPort For Core2. Module HMI brings PORT.B and PORT.C out of the stack. PORT.A passes through on M-Bus pins 19 and 20.
-- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. Core2 GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Stamp Pico GPIO36 is a different pin and is the cable's data input. Stamp Pico GPIO26 stays free for a later return path and is not wired (Postern [P-0020](../postern/docs/pitfalls.md#p-0020-input-only-gpio36)). Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is `0x1D` (Postern [D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). Pull-ups, levels, and the 100 kHz controller clock are the [Postern cable note](../postern/docs/cable.md). Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md). The Stamp Pico side is Postern [D-0017](../postern/docs/decisions.md#d-0017-reference-pins).
+- **Consequence:** GPIO21 and GPIO22 stay the internal I2C bus (AXP192, touch, RTC, IMU, HMI, Module Audio). GPIO0, GPIO2, GPIO12, and GPIO34 stay the onboard codec and are not wired to the Stamp Pico. Core2 GPIO36 is the other PORT.B wire and is input-only, so it is left unconnected. Stamp Pico GPIO36 is a different pin and is the cable's data input. Stamp Pico GPIO26 stays free for a later return path and is not wired (Postern [P-0020](https://github.com/oemaix/postern/blob/main/docs/pitfalls.md#p-0020-input-only-gpio36)). Grove red is 5 V and must not land on a GPIO ([P-0025](pitfalls.md#p-0025-grove-5v)). Wire colors follow ExtPort For Core2. Confirm them on the HMI connector before soldering. The GPIO numbers are the contract ([P-0023](pitfalls.md#p-0023-core2-pin-map)). The I2C address on this second bus is `0x1D` (Postern [D-0016](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0016-i2c-address)). Pull-ups, levels, and the 100 kHz controller clock are the [Postern cable note](https://github.com/oemaix/postern/blob/main/docs/cable.md). Pins the ESP32 GPIO matrix may use for a further I2S are listed in [architecture](architecture.md). The Stamp Pico side is Postern [D-0017](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0017-reference-pins).
 
 ### D-0032 I2S format
 
@@ -276,7 +282,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0036 AirPlay and DLNA
 
 - **Status:** Decided
-- **Choice:** Phase 2 receives AirPlay 1 (RAOP) and acts as a DLNA audio renderer. AirPlay 2 stays out. It needs an Apple license. Porta plays a URI a controller sets. It does not browse a media server.
+- **Choice:** Phase 3 receives AirPlay 1 (RAOP) and acts as a DLNA audio renderer. AirPlay 2 stays out. It needs an Apple license. Porta plays a URI a controller sets. It does not browse a media server.
+- **History:** Until 2026-10-31 this choice named phase 2. The roadmap of that date moved both receivers to phase 3.
 - **Codecs:** Every row is 16-bit stereo at 44.1 kHz or 48 kHz, the same contract as the I2S cable ([D-0032](#d-0032-i2s-format)). The Core2 resamples any other rate inside these codecs to one of those two.
 
   | Path | Codec | Notes |
@@ -294,7 +301,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** The software is Apache License 2.0. The text is `LICENSE`. The copyright line is `Copyright 2026 oemaix`.
 - **Source:** Project decision, 2026-10-28.
-- **Consequence:** New source files carry the Apache 2.0 header when they are added. This id does not grant a Spotify or Bluetooth license.
+- **Consequence:** New source files carry the Apache 2.0 header when they are added. This id does not grant a Spotify or Bluetooth license. The source of this repository stays Apache-2.0. Once cspot is linked, the firmware binary is GPL-3.0 ([D-0029](#d-0029-spotify-transport)). Accepted 2026-10-31.
 
 ### D-0038 Enclosure and approvals
 
@@ -306,8 +313,8 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0039 Firmware repos
 
 - **Status:** Decided
-- **Choice:** The Core2 application lives in this repo. The Stamp Pico image is the [Postern](../postern/README.md) submodule, `https://github.com/oemaix/postern.git`, branch `main`. Another project reuses the component `components/postern` and does not flash a second copy of that image ([D-0045](#d-0045-postern-image)).
-- **Shared surface:** The cable contract lives in Postern ([cable](../postern/docs/cable.md)). I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`components/postern/include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is `0x1D` ([Postern D-0016](../postern/docs/decisions.md#d-0016-i2c-address)). GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
+- **Choice:** The Core2 application lives in this repo. The Stamp Pico image is the [Postern](https://github.com/oemaix/postern/blob/main/README.md) submodule, `https://github.com/oemaix/postern.git`, branch `main`. Another project reuses the component `components/postern` and does not flash a second copy of that image ([D-0045](#d-0045-postern-image)).
+- **Shared surface:** The cable contract lives in Postern ([cable](https://github.com/oemaix/postern/blob/main/docs/cable.md)). I2S is 16-bit stereo at 44.1 or 48 kHz, Core2 master, audio only toward the Stamp Pico ([D-0031](#d-0031-board-link), [D-0032](#d-0032-i2s-format)). I2C is Postern's register file (`components/postern/include/postern_regs.h` there): rate, start, stop, and link status. The 7-bit address is `0x1D` ([Postern D-0016](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0016-i2c-address)). GPIOs on the Stamp Pico are Postern Kconfig, chosen at compile time, and they are not the Core2 numbers in [D-0031](#d-0031-board-link). UI, cspot, the ES8388, the HMI, and the resampler stay on the Core2 ([D-0042](#d-0042-core2-components)). A2DP, SBC, and AAC stay in Postern.
 - **Source:** Project decision, 2026-10-28, accepting the recommendation on this id. The name followed the same day. The submodule URL became the GitHub remote on `main` once that repository existed.
 - **Consequence:** The Core2 tree is [D-0043](#d-0043-firmware-tree). The sentence that another project flashes the Stamp Pico image is superseded by [D-0045](#d-0045-postern-image). A shared-components repository waits until the cable header outgrows Postern. [P-0028](pitfalls.md#p-0028-postern-file-url) is resolved.
 
@@ -321,7 +328,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 ### D-0042 Core2 components
 
 - **Status:** Decided
-- **Choice:** The Core2 application is one ESP-IDF image. Its phase 1 components are `app`, `input`, `ui`, `player`, `sink`, `net`, and `board`. `input` and `ui` are the panel and exchange the four actions. `ui` sends the player only play, pause, next, previous, and set volume, and reads one status snapshot. `player` delivers PCM only to `sink`. Scopes, tasks, and the phase 2 seams are [software](software.md).
+- **Choice:** The Core2 application is one ESP-IDF image. Its phase 1 components are `app`, `input`, `ui`, `player`, `sink`, `net`, and `board`. `input` and `ui` are the panel and exchange the four actions. `ui` sends the player only play, pause, next, previous, and set volume, and reads one status snapshot. `player` delivers PCM only to `sink`. Scopes, tasks, and the later seams are [software](software.md).
 - **Source:** Project decision, 2026-10-29. [FR-04](requirements.md) already keeps navigation inside the UI API. [D-0029](#d-0029-spotify-transport) already sends transport calls to the Connect session and PCM to Porta's I2S sink.
 - **Consequence:** The first firmware change uses these component names ([D-0043](#d-0043-firmware-tree)). The phase 1 image does not link AirPlay, DLNA, the line input, or a Postern client ([D-0023](#d-0023-separate-phase-1-prototypes), [P-0012](pitfalls.md#p-0012-phase-creep)). The panel does not call the drivers behind that seam ([P-0038](pitfalls.md#p-0038-panel-calls-the-player)).
 
@@ -331,7 +338,7 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Choice:** The Core2 application is the Rust crate `firmware/`. This supersedes the "no tree" clause of [D-0021](#d-0021-no-firmware-tree). Command and snapshot types live in `seam`. Playback is the labelled tone stand-in until cspot is linked. Phase 1 prototypes may use a bench supply. That does not close [D-0033](#d-0033-power-architecture) and does not mark the AXP192 current limit as measured. `Board::limit_measured` stays false until that number is written down. A false flag does not forbid Wi-Fi or I2S ([P-0040](pitfalls.md#p-0040-unmeasured-rail)). Linking cspot still does not start the codec by itself.
 - **History:** The first tree was C, with a header-only `seam`, and `idf.py` came from [D-0028](#d-0028-firmware-framework). [D-0046](#d-0046-core2-language) superseded that build.
 - **Source:** Phase 1 implementation, 2026-10-29, revised 2026-10-30. [P-0001](pitfalls.md#p-0001-spotify-on-the-esp32) already allows a labelled tone. The bench-supply recommendation on [D-0033](#d-0033-power-architecture) is accepted for the prototypes only.
-- **Consequence:** UC-01 through UC-04 have not passed on hardware. Phase 1 is started, not exited. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). Wi-Fi and I2S may start before the rail is measured. That is not the stable path. A guessed limit is not written into the tree ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
+- **Consequence:** The basic UI is in use on the bench. UC-01 has not passed: playback is still the tone stand-in. Phase 1 is started, not exited. UC-02 is phase 2. The host test in [operations](operations.md) covers the panel, the commands, and the tone PCM. The tone is not Spotify ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). Wi-Fi and I2S may start before the rail is measured. That is not the stable path. A guessed limit is not written into the tree ([P-0040](pitfalls.md#p-0040-unmeasured-rail)).
 
 ### D-0040 Python
 
@@ -346,22 +353,29 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Decided
 - **Choice:** The Porta flake does not carry a Python interpreter, `uv`, or `pip` for the hooks or for a project `.venv`. This supersedes [D-0040](#d-0040-python). Nothing in this repository imports a third-party Python package, so that ecosystem stays out of `flake.nix` until a Porta script must use it. On that day a gitignored `.venv` is created with `uv`. `pip` is not used. The Python inside an ESP-IDF install is not a project interpreter and is not this ban. A flake package added because the Core2 image target needs it is not this ban either.
 - **Source:** Project decision, 2026-10-29, revised 2026-10-30. `python314` and `uv` left the flake because this repository does not call them. The image build's Python is a later, separate need.
-- **Consequence:** `nix develop` does not put `python3` on `PATH` today. The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy for its own flake as [D-0019](../postern/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
+- **Consequence:** `nix develop` does not put `python3` on `PATH` today. The agent hooks remain standard-library Python and are started by the `python3` that launches them. No `.venv` and no `requirements.txt` until a third-party import exists. Postern records the same policy for its own flake as [D-0019](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0019-python-out-of-the-flake). [P-0029](pitfalls.md#p-0029-pip). [P-0044](pitfalls.md#p-0044-python-in-the-flake).
 
 ### D-0045 Postern image
 
 - **Status:** Decided
 - **Choice:** The Stamp Pico image is the Postern repository, pinned as the submodule `postern`. That repository is developed on its own and flashed with its own `idf.py`. The reusable part is the component `components/postern`. Another product sets `EXTRA_COMPONENT_DIRS` to that directory. This supersedes the sentence in [D-0039](#d-0039-firmware-repos) that another project flashes the image.
 - **Source:** Project decision, 2026-10-30. The Stamp Pico firmware is one image with one repository. Porta keeps the Core2 image in `firmware/`.
-- **Consequence:** Do not add a Stamp Pico application in this repository ([P-0047](pitfalls.md#p-0047-postern-image)). `firmware/` stays the Core2 image ([D-0043](#d-0043-firmware-tree)). Build and flash Postern from the Postern devshell, in `postern/`. Postern records the image as [D-0021](../postern/docs/decisions.md#d-0021-image) and the shell as [D-0022](../postern/docs/decisions.md#d-0022-idf-in-the-shell).
+- **Consequence:** Do not add a Stamp Pico application in this repository ([P-0047](pitfalls.md#p-0047-postern-image)). `firmware/` stays the Core2 image ([D-0043](#d-0043-firmware-tree)). Build and flash Postern from the Postern devshell, in `postern/`. Postern records the image as [D-0021](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0021-image) and the shell as [D-0022](https://github.com/oemaix/postern/blob/main/docs/decisions.md#d-0022-idf-in-the-shell).
 
 ### D-0046 Core2 language
 
 - **Status:** Decided
-- **Choice:** The Core2 application in `firmware/` is Rust on ESP-IDF v5.5.6, through `esp-idf-svc` 0.53 and the `esp-idf-hal` and `esp-idf-sys` crates it re-exports. There is no ESP-IDF 5.6 release. v5.5.6 is the current bugfix on the 5.5 line. This supersedes the Core2 half of [D-0028](#d-0028-firmware-framework) and the `idf.py` sentence in [D-0043](#d-0043-firmware-tree). The Stamp Pico image stays C and ESP-IDF v6.1 in the Postern submodule. Arduino, PlatformIO, an esp-hal bare-metal image, and an ESP-IDF Nix flake pinned to an older nixpkgs stay out. cspot remains the Connect library when it is linked. It is not linked yet.
+- **Choice:** The Core2 application in `firmware/` is Rust on ESP-IDF v5.5.6, through `esp-idf-svc` 0.53 and the `esp-idf-hal` and `esp-idf-sys` crates it re-exports. There is no ESP-IDF 5.6 release. v5.5.6 is the current bugfix on the 5.5 line. This supersedes the Core2 half of [D-0028](#d-0028-firmware-framework) and the `idf.py` sentence in [D-0043](#d-0043-firmware-tree). The Stamp Pico image stays C and ESP-IDF v6.1 in the Postern submodule. Arduino, PlatformIO, an esp-hal bare-metal image, and an ESP-IDF Nix flake pinned to an older nixpkgs stay out. cspot remains the Connect library. The image links `philippe44/cspot` at `99e5c95ad6d862a1b7845dda81fd9c8233b45b9f`. The headphone jack is not clocked ([P-0060](pitfalls.md#p-0060-cspot-image-link)).
 - **Source:** Project decision, 2026-10-30. The Rust crates' CI builds ESP-IDF v5.5.3 and does not build v6.1. v5.5.6 is that line's current bugfix, and the line is supported through January 2028. The cspot fork named in [D-0029](#d-0029-spotify-transport) is maintained against IDF 5.5.
 - **Consequence:** The phase 1 modules and the tone stand-in keep their behaviour. `cargo test` in `firmware/` is the host check. A passing host test is not a flashed image ([P-0048](pitfalls.md#p-0048-core2-image-target)). The image target is `xtensa-esp32-espidf`. The Porta shell's `rustc` is the esp-rs release 1.95.0.0 ([P-0049](pitfalls.md#p-0049-esp-rs-rustc)). `ldproxy` and `espflash` come from this nixpkgs pin. The `espflash` package also installs `cargo-espflash`. ESP-IDF v5.5.6 is not a Nix package. `embuild` clones it into `firmware/.embuild` when the image is built. `idf.py` leaves the Porta shell. Postern's shell still provides it for v6.1. The editor list includes `rust-lang.rust-analyzer` ([D-0024](#d-0024-editor-extensions)). `ms-vscode.cpptools` stays for Postern.
 - **History:** On 2026-10-30 the shell gained that rustc, `ldproxy`, and `espflash`. The earlier sentence, that the shell did not yet provide the Xtensa target, described the gap this closed.
+
+### D-0047 Module Audio LEDs
+
+- **Status:** Decided
+- **Choice:** The three WS2812C-2020 LEDs on the side of Module Audio show which source is playing. All three show the same steady color. Idle and pause write them off. A Spotify Connect session that is playing lights them green. The TRS source, while it is playing, lights them red. AirPlay or DLNA, while playing, lights them blue. Brightness stays at the module default of 10 on the 0–100 register. Phase 2 implements the lamps for idle, Spotify, and the TRS source. The blue pattern is written when those phase 3 sources play. The lamps do not encode jack versus Bluetooth. The Module HMI LEDs stay unassigned and off.
+- **Source:** Project decision, 2026-10-31. Module Audio (SKU M144) lists 3 × WS2812C-2020, driven by the STM32 at I2C `0x33`. The vendor protocol (M144 I2C protocol V1, 2026-08-11) puts brightness in register `0x30` (0–100, default 10) and nine color bytes in register `0x40` (LED1 R, G, B, then LED2, then LED3, each 0–255, default 0). [Module Audio](https://docs.m5stack.com/en/module/Module_Audio).
+- **Consequence:** Phase 1 leaves the lamps off ([P-0012](pitfalls.md#p-0012-phase-creep)). `board` writes `0x33` from the active source. `ui` does not. A status change writes `0x40` only. It does not write `0xF0`, which erases the module flash to store microphone config, headphone mode, and brightness ([P-0059](pitfalls.md#p-0059-module-audio-leds)). Startup may set `0x30` to 10 in RAM if the module is not already there, and does not save that write. One channel is 255 and the other two are 0: green is G, red is R, blue is B. The tone stand-in uses the idle pattern ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). The vendor module current, 23.53 mA operating and 8.58 mA standby at 3.3 V, is the whole module. It is not an LED budget and it is not the cell limit ([D-0033](#d-0033-power-architecture), [P-0040](pitfalls.md#p-0040-unmeasured-rail)). The pattern stays small beside the backlight and Wi-Fi because idle is off, a playing source lights one channel, brightness stays at 10, and the color does not animate.
 
 ## Undecided
 
@@ -370,8 +384,9 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 - **Status:** Undecided
 - **Options:** Leave it unused. Bind it to a mode switch. Bind it to play/pause.
 - **Recommendation:** Leave it unused through phase 1. Play/pause is Activate on the transport block, which keeps one action model.
-- **Source:** `ui.txt` says the other button is undecided.
-- **Consequence:** Software reports the button and does not act on it.
+- **Source:** `ui.txt` says the other button is undecided. Since 2026-11-01 the silkscreen name is BtnB, register `0x22` ([D-0009](#d-0009-hmi-mapping)).
+- **Consequence:** Software reports BtnB and does not act on it. The three glass buttons are the same until a label exists ([D-0034](#d-0034-screen-buttons)).
+- **History:** Until 2026-11-01 this id named BtnA, because BtnB was Back. Back moved to BtnA that day.
 
 ### D-0027 microSD purpose
 
@@ -387,15 +402,15 @@ Items marked as a reasonable completion were filled in during bootstrap because 
 
 - **Status:** Undecided
 - **Options:** Phase 1 uses Zeroconf from the Spotify app, then stored credentials. A setup screen types the account. The Web API gets its own OAuth token later.
-- **Recommendation:** Zeroconf once, then the stored blob. The Core2 does not ask for a Spotify password. "Easier login" in phase 2 means fewer steps around that first discovery, not a keyboard.
-- **Source:** `readmap.txt` puts an easier login in phase 2, which implies phase 1 may be awkward, and does not say what either method is.
+- **Recommendation:** Zeroconf once, then the stored blob. The Core2 does not ask for a Spotify password. "Easier login" in phase 3 means fewer steps around that first discovery, not a keyboard.
+- **Source:** `readmap.txt` put an easier login after phase 1, which implies phase 1 may be awkward, and does not say what either method is. The roadmap of 2026-10-31 places that easier login in phase 3.
 - **Consequence:** The Connect screen has a placeholder and no fields yet.
 
 ### D-0033 Power architecture
 
 - **Status:** Undecided
 - **Options:** M5GO Bottom2 cell is the only pack, charged by its TP4057, measured by an added gauge or by inference. The Core2 AXP192 still measures a pack on its battery pins. The HMI cell is isolated and unused. A bench supply powers phase 1 and the product decision waits.
-- **Recommendation:** Use a bench supply for the two phase 1 prototypes. Before the stack is closed up, draw one pack, one charger, and one measurement point. Do not parallel the HMI cell, the Bottom2 cell, and the AXP192 pack.
+- **Recommendation:** Use a bench supply for phase 1. Before the stack is closed up, draw one pack, one charger, and one measurement point. Do not parallel the HMI cell, the Bottom2 cell, and the AXP192 pack.
 - **Source:** Reasonable completion of the mechanical notes on Core2 v1.3. The notes themselves do not describe power.
 - **Consequence:** FR-11 cannot be implemented against a guessed gauge. [P-0004](pitfalls.md#p-0004-stack-mechanics) and [P-0005](pitfalls.md#p-0005-parallel-cells) still apply.
 

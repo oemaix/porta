@@ -10,9 +10,13 @@
 /firmware/sdkconfig
 /firmware/sdkconfig.old
 /firmware/managed_components/
+/firmware/third_party/
 
 # Nix
 /result
 /result-*
 .direnv/
 .venv
+
+.env
+.cursorignore

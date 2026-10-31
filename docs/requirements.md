@@ -1,8 +1,8 @@
 # Requirements
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-31
 
-Phase 1 requirements are the acceptance bar for that phase. Phase 2 requirements are not implemented early ([P-0012](pitfalls.md#p-0012-phase-creep)).
+Phase 1 requirements are the acceptance bar for that phase. Later requirements are not implemented early ([P-0012](pitfalls.md#p-0012-phase-creep)).
 
 ## Functional
 
@@ -10,18 +10,23 @@ Phase 1 requirements are the acceptance bar for that phase. Phase 2 requirements
 | --- | --- | --- | --- |
 | FR-01 | 1 | The Core2 plays a Wi-Fi audio stream through the Module Audio headphone output. | UC-01 |
 | FR-02 | 1 | The player UI can start, pause, and resume that stream. | UC-01 |
-| FR-03 | 1 | The Stamp Pico transmits I2S audio to Bluetooth headphones using SBC, and uses AAC when the session supports it. | UC-02 |
+| FR-03 | 2 | The product can connect and remove a Bluetooth headphone. The Stamp Pico transmits that audio using SBC, and uses AAC when the session supports it. | UC-02 |
 | FR-04 | 1 | A UI API models a screen stack, a focus index, and the actions next, previous, activate, and back. Input devices call that API. They do not draw their own navigation. | UC-03, UC-04 |
 | FR-05 | 1 | The first UI is small and is complete: a listener can reach playback and leave every screen without a host attached. | UC-01, UC-03, UC-04 |
-| FR-06 | 1 | Module HMI wheel motion moves focus, the wheel press activates, and button index 2 goes back. | UC-03, UC-04 |
+| FR-06 | 1 | Module HMI wheel motion moves focus, the wheel press activates, and BtnA goes back. | UC-03, UC-04 |
 | FR-07 | 2 | Auxiliary mode plays the TRS input on Bluetooth headphones. | UC-05 |
-| FR-08 | 2 | Porta appears as an AirPlay 1 receiver, decodes ALAC, and plays it on the jack and on Bluetooth. | UC-06 |
-| FR-09 | 2 | Porta appears as a DLNA renderer for 16-bit stereo LPCM, WAV PCM, and ALAC at 44.1 or 48 kHz, and plays that audio on the jack and on Bluetooth. | UC-07 |
-| FR-10 | 2 | Login to the Spotify path takes fewer steps than the phase 1 method. | UC-01 |
-| FR-11 | 2 | The UI shows battery level and powers off at a defined low threshold. | UC-08 |
-| FR-12 | 2 | The screen layout is elaborated without changing the phase 1 actions. | UC-03 |
+| FR-08 | 3 | Porta appears as an AirPlay 1 receiver, decodes ALAC, and plays it on the jack and on Bluetooth. | UC-06 |
+| FR-09 | 3 | Porta appears as a DLNA renderer for 16-bit stereo LPCM, WAV PCM, and ALAC at 44.1 or 48 kHz, and plays that audio on the jack and on Bluetooth. | UC-07 |
+| FR-10 | 3 | Login to the Spotify path takes fewer steps than the phase 1 method. | UC-01 |
+| FR-11 | 3 | At a defined low threshold the device stops playback and powers off. | UC-08 |
+| FR-12 | 3 | The screen layout is elaborated without changing the phase 1 actions. | UC-03 |
+| FR-13 | 2 | The UI shows a simple power level. It does not power the device off from that level. | UC-09 |
+| FR-14 | 2 | After a period without operation the LCD turns off. Audio keeps playing. The Module HMI, the touchscreen, or a touch button wakes the panel. | UC-10 |
+| FR-15 | 2 | The three Module Audio LEDs show the playing source: off when idle or paused, green while Spotify Connect is playing, red while the TRS source is playing. Brightness stays at the module default. | UC-11 |
 
 FR-01 is the Connect session on the Core2 ([D-0029](decisions.md#d-0029-spotify-transport)). The bytes on Wi-Fi are the track cspot fetches. FR-10 waits on [D-0030](decisions.md#d-0030-login).
+
+FR-15 is the side lamps on Module Audio ([D-0047](decisions.md#d-0047-module-audio-leds)). The tone stand-in does not light the Spotify color ([P-0001](pitfalls.md#p-0001-spotify-on-the-esp32)). AirPlay and DLNA use the blue pattern in that decision when they play. Phase 2 does not implement those sources ([P-0012](pitfalls.md#p-0012-phase-creep)).
 
 ## Non-functional
 

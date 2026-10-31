@@ -131,6 +131,32 @@ fn glyph_on(ch: u8, col: i32, row: i32) -> bool {
     GLYPHS[index][col as usize] & (1 << row) != 0
 }
 
+/// Origin and scale for a label. The full-panel title stays 1x on the top edge.
+/// A block centers its line.
+fn text_place(text: &str, rect: &Rect) -> (i32, i32, i32) {
+    let scale = if rect.w >= 320 && rect.h >= 240 {
+        1
+    } else {
+        SCALE
+    };
+    let advance = 6 * scale;
+    let text_w = text.len() as i32 * advance;
+    let origin_x = if scale == 1 {
+        rect.x as i32 + 8
+    } else {
+        let slack = rect.w as i32 - text_w;
+        rect.x as i32 + if slack > 0 { slack / 2 } else { 0 }
+    };
+    let glyph_px_h = GLYPH_H * scale;
+    let origin_y = if scale == 1 {
+        rect.y as i32 + 2
+    } else {
+        let slack = rect.h as i32 - glyph_px_h;
+        rect.y as i32 + if slack > 0 { slack / 2 } else { 0 }
+    };
+    (origin_x, origin_y, scale)
+}
+
 /// Ink for `text` inside `rect`. The full-panel item keeps its title on
 /// the top edge. Other blocks center the line in the block.
 pub fn text_covers(text: &str, rect: &Rect, x: i32, y: i32) -> bool {
@@ -144,26 +170,13 @@ pub fn text_covers(text: &str, rect: &Rect, x: i32, y: i32) -> bool {
     if x < left || y < top || x >= right || y >= bottom {
         return false;
     }
-    // The full-panel title sits above the volume line at y=12, so it stays 1x.
-    let scale = if rect.w >= 320 && rect.h >= 240 {
-        1
-    } else {
-        SCALE
-    };
-    let origin_x = left + 8;
-    let glyph_px_h = GLYPH_H * scale;
-    let origin_y = if scale == 1 {
-        top + 2
-    } else {
-        let slack = rect.h as i32 - glyph_px_h;
-        top + if slack > 0 { slack / 2 } else { 0 }
-    };
+    let (origin_x, origin_y, scale) = text_place(text, rect);
     if x < origin_x || y < origin_y {
         return false;
     }
     let dx = x - origin_x;
     let dy = y - origin_y;
-    if dy >= glyph_px_h {
+    if dy >= GLYPH_H * scale {
         return false;
     }
     let advance = 6 * scale;
@@ -177,6 +190,37 @@ pub fn text_covers(text: &str, rect: &Rect, x: i32, y: i32) -> bool {
         return false;
     }
     glyph_on(bytes[index], gx / scale, dy / scale)
+}
+
+/// Calls `put` for each ink pixel of `text`. Same placement as `text_covers`.
+pub fn blit_text(text: &str, rect: &Rect, mut put: impl FnMut(i32, i32)) {
+    if text.is_empty() {
+        return;
+    }
+    let (origin_x, origin_y, scale) = text_place(text, rect);
+    let left = rect.x as i32;
+    let top = rect.y as i32;
+    let right = left + rect.w as i32;
+    let bottom = top + rect.h as i32;
+    for (index, &ch) in text.as_bytes().iter().enumerate() {
+        let cell_x = origin_x + index as i32 * 6 * scale;
+        for col in 0..GLYPH_W {
+            for row in 0..GLYPH_H {
+                if !glyph_on(ch, col, row) {
+                    continue;
+                }
+                for sy in 0..scale {
+                    for sx in 0..scale {
+                        let x = cell_x + col * scale + sx;
+                        let y = origin_y + row * scale + sy;
+                        if x >= left && y >= top && x < right && y < bottom {
+                            put(x, y);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -195,14 +239,19 @@ mod tests {
         let mut text = FixedText::<24>::new();
         text.set("Play");
         let mut hits = 0;
+        let mut min_x = 320;
         for y in 48..76 {
-            for x in 16..120 {
+            for x in 16..304 {
                 if text_covers(text.as_str(), &rect, x, y) {
                     hits += 1;
+                    if x < min_x {
+                        min_x = x;
+                    }
                 }
             }
         }
         assert!(hits > 10);
+        assert!(min_x > 100, "play sits in the block, not on the left pad");
         assert!(!text_covers(text.as_str(), &rect, 0, 0));
         assert!(!text_covers(" ", &rect, 30, 58));
     }
@@ -227,5 +276,28 @@ mod tests {
         }
         assert!(hits_top > 0);
         assert_eq!(hits_mid, 0);
+    }
+
+    #[test]
+    fn blit_matches_covers() {
+        use super::blit_text;
+        let rect = Rect {
+            x: 16,
+            y: 48,
+            w: 288,
+            h: 28,
+        };
+        let mut seen = [[false; 288]; 28];
+        blit_text("Play", &rect, |x, y| {
+            assert!(text_covers("Play", &rect, x, y));
+            seen[(y - 48) as usize][(x - 16) as usize] = true;
+        });
+        for y in 48..76 {
+            for x in 16..304 {
+                if text_covers("Play", &rect, x, y) {
+                    assert!(seen[(y - 48) as usize][(x - 16) as usize]);
+                }
+            }
+        }
     }
 }

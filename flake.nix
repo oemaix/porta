@@ -56,6 +56,9 @@
               ninja
               gcc
               python313
+              # nanopb's generator imports this while the image builds cspot (D-0044).
+              python313Packages.protobuf
+              protobuf
               libclang
               ldproxy
               espflash

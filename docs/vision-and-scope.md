@@ -1,6 +1,6 @@
 # Vision and scope
 
-Status: baseline · 2026-10-29
+Status: baseline · 2026-10-31
 
 ## Vision
 
@@ -25,7 +25,7 @@ The Blackberry 7290 and 8100 are the reference for the wheel grammar only. They 
 
 ## Phases
 
-Phase 1 proves the two hard paths separately and puts a usable UI on the Core2. Phase 2 makes one product out of them and adds the remaining listener-facing behaviour. Work from phase 2 does not land in phase 1 ([P-0012](pitfalls.md#p-0012-phase-creep)).
+Phase 1 is Spotify Connect on the headphone jack and the basic UI. Phase 2 brings Postern into that product and adds the TRS source, a simple power level, panel sleep, and Module Audio LEDs that show the playing source. Phase 3 adds the other sources and the finished power and layout behaviour. Later work does not land in an earlier phase ([P-0012](pitfalls.md#p-0012-phase-creep)).
 
 ## Non-goals for the skeleton
 

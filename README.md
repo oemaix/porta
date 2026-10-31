@@ -2,7 +2,7 @@
 
 Porta is a portable audio appliance built on M5Stack Core2 v1.3. It plays a Spotify stream, bridges a 3.5 mm input to Bluetooth headphones, and, in a later phase, receives AirPlay and DLNA. Wi-Fi stays on the Core2. Bluetooth transmission stays on a separate M5Stamp Pico.
 
-**Status:** Phase 0. This tree holds the specification, the development skeleton, and the [Postern](postern/README.md) submodule. There is no Core2 application yet. The current phase and the open choices are in [docs/roadmap.md](docs/roadmap.md) and [docs/decisions.md](docs/decisions.md).
+**Status:** Phase 0. This tree holds the specification, the development skeleton, and the [Postern](https://github.com/oemaix/postern/blob/main/README.md) submodule. There is no Core2 application yet. The current phase and the open choices are in [docs/roadmap.md](docs/roadmap.md) and [docs/decisions.md](docs/decisions.md).
 
 ## Documentation
 
@@ -15,7 +15,8 @@ Porta is a portable audio appliance built on M5Stack Core2 v1.3. It plays a Spot
 | [Requirements](docs/requirements.md) | Functional and non-functional requirements |
 | [UI design](docs/ui-design.md) | Inputs, screens, visual rules |
 | [Architecture](docs/architecture.md) | Boards, audio paths, buses |
-| [Cable](postern/docs/cable.md) | Application note for the I2C and I2S link. It lives in Postern. |
+| [Schematics](docs/hardware/schematics.md) | Vendor circuit prints for the boards |
+| [Cable](https://github.com/oemaix/postern/blob/main/docs/cable.md) | Application note for the I2C and I2S link. It lives in Postern. |
 | [Software](docs/software.md) | Core2 components and how they meet |
 | [Operations](docs/operations.md) | Devshell, container, editor, agent hook |
 | [Roadmap](docs/roadmap.md) | Phases and current status |

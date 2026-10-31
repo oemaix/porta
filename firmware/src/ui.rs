@@ -13,9 +13,12 @@
 // limitations under the License.
 
 use crate::seam::{
-    Action, ActionKind, Command, CommandKind, FixedText, Queue, Rect, Status, LABEL_LEN,
+    Action, ActionKind, Command, CommandKind, FixedText, Queue, Rect, Status, LABEL_LEN, TITLE_LEN,
     VOLUME_MAX, VOLUME_STEP,
 };
+
+pub const JOINING_TITLE: &str = "Joining Wi-Fi";
+const NOT_ON_NETWORK: &str = "Not on a network";
 
 pub const DRAW_CAP: usize = 8;
 
@@ -38,8 +41,7 @@ pub enum Screen {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
     Play = 1,
-    Louder,
-    Quieter,
+    Volume,
     OpenConnect,
     OpenSettings,
     Info,
@@ -67,7 +69,10 @@ pub struct Ui {
     pub focus: u8,
     pub shown_playing: bool,
     shown_volume: u8,
-    volume_text: FixedText<LABEL_LEN>,
+    painted_wifi: bool,
+    painted_ready: bool,
+    painted_title: FixedText<TITLE_LEN>,
+    pick_line: FixedText<LABEL_LEN>,
 }
 
 impl Ui {
@@ -78,12 +83,37 @@ impl Ui {
             focus: 0,
             shown_playing: status.playing,
             shown_volume: status.volume,
-            volume_text: FixedText::new(),
+            painted_wifi: status.wifi_associated,
+            painted_ready: status.session_ready,
+            painted_title: status.title,
+            pick_line: label_from("Pick porta in Spotify"),
         }
+    }
+
+    /// The phone picks this Connect name. An empty name stays `porta`.
+    pub fn set_device_name(&mut self, name: &str) {
+        let name = if name.is_empty() { "porta" } else { name };
+        self.pick_line.set(&format!("Pick {name} in Spotify"));
+    }
+
+    pub fn status_changed(&self, status: &Status) -> bool {
+        self.painted_wifi != status.wifi_associated
+            || self.painted_ready != status.session_ready
+            || self.painted_title.as_str() != status.title.as_str()
+    }
+
+    pub fn mark_painted(&mut self, status: &Status) {
+        self.painted_wifi = status.wifi_associated;
+        self.painted_ready = status.session_ready;
+        self.painted_title.set(status.title.as_str());
     }
 
     pub fn screen(&self) -> Screen {
         self.stack[self.depth as usize - 1]
+    }
+
+    pub fn shown_volume(&self) -> u8 {
+        self.shown_volume
     }
 
     pub fn blocks(&self, status: &Status, out: &mut [BlockView]) -> usize {
@@ -102,7 +132,7 @@ impl Ui {
                         "Wi-Fi down"
                     },
                 );
-                place(&mut out[1], 1, Role::Info, "Tone stand-in");
+                place(&mut out[1], 1, Role::Info, self.connect_line(status));
                 2
             }
             Screen::Settings => {
@@ -113,20 +143,16 @@ impl Ui {
                 1
             }
             Screen::Now => {
-                if out.len() < 5 {
+                if out.len() < 4 {
                     return 0;
                 }
-                place(
-                    &mut out[0],
-                    0,
-                    Role::Play,
-                    if self.shown_playing { "Pause" } else { "Play" },
-                );
-                place(&mut out[1], 1, Role::Louder, "Louder");
-                place(&mut out[2], 2, Role::Quieter, "Quieter");
-                place(&mut out[3], 3, Role::OpenConnect, "Connect");
-                place(&mut out[4], 4, Role::OpenSettings, "Settings");
-                5
+                place(&mut out[0], 0, Role::Play, "");
+                out[0].label = flanked(if self.shown_playing { "Pause" } else { "Play" });
+                place(&mut out[1], 1, Role::Volume, "");
+                out[1].label = vol_word(self.shown_volume);
+                place(&mut out[2], 2, Role::OpenConnect, "Connect");
+                place(&mut out[3], 3, Role::OpenSettings, "Settings");
+                4
             }
         }
     }
@@ -163,42 +189,8 @@ impl Ui {
                 }
             }
             ActionKind::Activate => match blocks[self.focus as usize].role {
-                Role::Play => {
-                    let next_playing = !self.shown_playing;
-                    let kind = if next_playing {
-                        CommandKind::Play
-                    } else {
-                        CommandKind::Pause
-                    };
-                    if send(queue, kind, 0) {
-                        self.shown_playing = next_playing;
-                    }
-                }
-                Role::Louder => {
-                    if self.shown_volume >= VOLUME_MAX {
-                        return;
-                    }
-                    if send(queue, CommandKind::SetVolume, VOLUME_STEP) {
-                        let next = if self.shown_volume <= VOLUME_MAX - VOLUME_STEP as u8 {
-                            self.shown_volume + VOLUME_STEP as u8
-                        } else {
-                            VOLUME_MAX
-                        };
-                        self.shown_volume = next;
-                    }
-                }
-                Role::Quieter => {
-                    if self.shown_volume == 0 {
-                        return;
-                    }
-                    if send(queue, CommandKind::SetVolume, -VOLUME_STEP) {
-                        if self.shown_volume >= VOLUME_STEP as u8 {
-                            self.shown_volume -= VOLUME_STEP as u8;
-                        } else {
-                            self.shown_volume = 0;
-                        }
-                    }
-                }
+                Role::Play => self.transport(status, queue, action.index),
+                Role::Volume => self.volume_side(queue, action.index),
                 Role::OpenConnect => self.push_screen(Screen::Connect),
                 Role::OpenSettings => self.push_screen(Screen::Settings),
                 Role::Info => {}
@@ -208,11 +200,9 @@ impl Ui {
     }
 
     pub fn draw(&mut self, status: &Status, out: &mut [DrawItem]) -> usize {
-        if out.len() < 2 {
+        if out.is_empty() {
             return 0;
         }
-        self.volume_text
-            .set(&format!("Volume {}", self.shown_volume));
         let mut n = 0usize;
         out[n] = DrawItem {
             rect: Rect {
@@ -222,19 +212,7 @@ impl Ui {
                 h: 240,
             },
             fill: COLOR_BG,
-            text: label_from(status.title.as_str()),
-            focused: false,
-        };
-        n += 1;
-        out[n] = DrawItem {
-            rect: Rect {
-                x: BLOCK_X,
-                y: 12,
-                w: BLOCK_W,
-                h: 28,
-            },
-            fill: COLOR_BG,
-            text: self.volume_text,
+            text: label_from(self.headline(status)),
             focused: false,
         };
         n += 1;
@@ -257,6 +235,89 @@ impl Ui {
             n += 1;
         }
         n
+    }
+
+    fn headline<'a>(&'a self, status: &'a Status) -> &'a str {
+        if status.session_ready {
+            status.title.as_str()
+        } else if status.wifi_associated {
+            self.pick_line.as_str()
+        } else if status.title.as_str() == JOINING_TITLE {
+            JOINING_TITLE
+        } else {
+            "Wi-Fi down"
+        }
+    }
+
+    fn connect_line<'a>(&'a self, status: &'a Status) -> &'a str {
+        if status.session_ready {
+            status.title.as_str()
+        } else if status.wifi_associated {
+            self.pick_line.as_str()
+        } else {
+            NOT_ON_NETWORK
+        }
+    }
+
+    /// Index 0 is play or pause. 1 is previous. 2 is next.
+    /// Without a session the block does not start the tone.
+    fn transport(&mut self, status: &Status, queue: &mut Queue, zone: u8) {
+        if !status.session_ready {
+            return;
+        }
+        match zone {
+            1 => {
+                send(queue, CommandKind::Previous, 0);
+            }
+            2 => {
+                send(queue, CommandKind::Next, 0);
+            }
+            _ => {
+                let next_playing = !self.shown_playing;
+                let kind = if next_playing {
+                    CommandKind::Play
+                } else {
+                    CommandKind::Pause
+                };
+                if send(queue, kind, 0) {
+                    self.shown_playing = next_playing;
+                }
+            }
+        }
+    }
+
+    /// Index 1 is quieter. Index 2 is louder. The center is the readout.
+    fn volume_side(&mut self, queue: &mut Queue, zone: u8) {
+        match zone {
+            1 => self.bump(queue, -VOLUME_STEP),
+            2 => self.bump(queue, VOLUME_STEP),
+            _ => {}
+        }
+    }
+
+    fn bump(&mut self, queue: &mut Queue, step: i8) {
+        if step > 0 {
+            if self.shown_volume >= VOLUME_MAX {
+                return;
+            }
+            if send(queue, CommandKind::SetVolume, step) {
+                let room = VOLUME_MAX - self.shown_volume;
+                let add = if room < step as u8 { room } else { step as u8 };
+                self.shown_volume += add;
+            }
+        } else if step < 0 {
+            if self.shown_volume == 0 {
+                return;
+            }
+            if send(queue, CommandKind::SetVolume, step) {
+                let down = (-step) as u8;
+                if self.shown_volume >= down {
+                    self.shown_volume -= down;
+                } else {
+                    self.shown_volume = 0;
+                }
+            }
+        }
     }
 
     fn push_screen(&mut self, screen: Screen) {
@@ -304,4 +365,37 @@ fn label_from(src: &str) -> FixedText<LABEL_LEN> {
     let mut text = FixedText::new();
     text.set(src);
     text
+}
+
+/// `<`, the word centered, `>`. Twenty-three columns, so the chevrons sit
+/// on the block edges once the line itself is centered.
+fn flanked(word: &str) -> FixedText<LABEL_LEN> {
+    const WIDTH: usize = LABEL_LEN - 1;
+    let mut bytes = [b' '; LABEL_LEN];
+    let word_bytes = word.as_bytes();
+    let word_len = word_bytes.len().min(WIDTH - 2);
+    let left = (WIDTH - 2 - word_len) / 2;
+    bytes[0] = b'<';
+    bytes[1 + left..1 + left + word_len].copy_from_slice(&word_bytes[..word_len]);
+    bytes[WIDTH - 1] = b'>';
+    label_from(core::str::from_utf8(&bytes[..WIDTH]).unwrap())
+}
+
+fn vol_word(volume: u8) -> FixedText<LABEL_LEN> {
+    let mut raw = [0u8; 8];
+    raw[..4].copy_from_slice(b"vol ");
+    let n = if volume >= 100 {
+        raw[4] = b'1';
+        raw[5] = b'0';
+        raw[6] = b'0';
+        7
+    } else if volume >= 10 {
+        raw[4] = b'0' + volume / 10;
+        raw[5] = b'0' + volume % 10;
+        6
+    } else {
+        raw[4] = b'0' + volume;
+        5
+    };
+    flanked(core::str::from_utf8(&raw[..n]).unwrap())
 }

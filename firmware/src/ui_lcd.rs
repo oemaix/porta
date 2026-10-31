@@ -16,19 +16,28 @@
 //! GPIO38, CS GPIO5, DC GPIO15. Reset is the AXP192, already released
 //! by `panel_power`. The command list is the ILI9342C sequence
 //! (external command 0xC8, then the power and gamma registers).
+//!
+//! The frame is 150 KB in PSRAM. Blocks and glyphs are filled as areas.
+//! SPI3 on this ESP32 cannot DMA from PSRAM, so each paint copies the
+//! frame out through one internal DMA band at a time (P-0053).
 
 use std::sync::Mutex;
 
 use esp_idf_svc::hal::delay::FreeRtos;
 use esp_idf_svc::sys;
 
-use crate::font::text_covers;
+use crate::font::blit_text;
 use crate::seam::Rect;
 use crate::seam::Status;
 use crate::ui::{DrawItem, Ui, DRAW_CAP};
 
 const LCD_WIDTH: i32 = 320;
 const LCD_HEIGHT: i32 = 240;
+const ROW_BYTES: usize = (LCD_WIDTH as usize) * 2;
+const FRAME_BYTES: usize = ROW_BYTES * (LCD_HEIGHT as usize);
+/// Sixteen rows fit in internal DMA memory. 240 divides evenly.
+const BAND_ROWS: i32 = 16;
+const BAND_BYTES: usize = ROW_BYTES * (BAND_ROWS as usize);
 const LCD_SCLK: i32 = 18;
 const LCD_MOSI: i32 = 23;
 const LCD_MISO: i32 = 38;
@@ -108,13 +117,9 @@ fn lcd_bus() -> bool {
             miso_io_num: LCD_MISO,
         },
         sclk_io_num: LCD_SCLK,
-        __bindgen_anon_3: sys::spi_bus_config_t__bindgen_ty_3 {
-            quadwp_io_num: -1,
-        },
-        __bindgen_anon_4: sys::spi_bus_config_t__bindgen_ty_4 {
-            quadhd_io_num: -1,
-        },
-        max_transfer_sz: LCD_WIDTH * 2,
+        __bindgen_anon_3: sys::spi_bus_config_t__bindgen_ty_3 { quadwp_io_num: -1 },
+        __bindgen_anon_4: sys::spi_bus_config_t__bindgen_ty_4 { quadhd_io_num: -1 },
+        max_transfer_sz: BAND_BYTES as i32,
         ..Default::default()
     };
     let io_cfg = sys::esp_lcd_panel_io_spi_config_t {
@@ -157,11 +162,121 @@ fn lcd_bus() -> bool {
     true
 }
 
-fn inside(rect: &Rect, x: i32, y: i32) -> bool {
-    x >= rect.x as i32
-        && y >= rect.y as i32
-        && x < rect.x as i32 + rect.w as i32
-        && y < rect.y as i32 + rect.h as i32
+#[derive(Clone, Copy)]
+struct PanelBuf {
+    frame: usize,
+    bounce: usize,
+}
+
+fn panel_buf() -> Option<PanelBuf> {
+    static SLOT: Mutex<Option<PanelBuf>> = Mutex::new(None);
+    let mut slot = SLOT.lock().unwrap_or_else(|err| err.into_inner());
+    if let Some(buf) = *slot {
+        return Some(buf);
+    }
+    unsafe {
+        let frame =
+            sys::heap_caps_malloc(FRAME_BYTES, sys::MALLOC_CAP_SPIRAM | sys::MALLOC_CAP_8BIT);
+        let bounce = sys::heap_caps_aligned_alloc(
+            4,
+            BAND_BYTES,
+            sys::MALLOC_CAP_DMA | sys::MALLOC_CAP_INTERNAL,
+        );
+        if frame.is_null() || bounce.is_null() {
+            if !frame.is_null() {
+                sys::heap_caps_free(frame);
+            }
+            if !bounce.is_null() {
+                sys::heap_caps_free(bounce);
+            }
+            log::error!("panel buffer failed");
+            return None;
+        }
+        let buf = PanelBuf {
+            frame: frame as usize,
+            bounce: bounce as usize,
+        };
+        *slot = Some(buf);
+        Some(buf)
+    }
+}
+
+fn put_px(frame: &mut [u8], x: i32, y: i32, color: u16) {
+    if x < 0 || y < 0 || x >= LCD_WIDTH || y >= LCD_HEIGHT {
+        return;
+    }
+    let i = (y as usize * LCD_WIDTH as usize + x as usize) * 2;
+    frame[i] = (color >> 8) as u8;
+    frame[i + 1] = color as u8;
+}
+
+fn fill_rect(frame: &mut [u8], rect: Rect, color: u16) {
+    let hi = (color >> 8) as u8;
+    let lo = color as u8;
+    let x0 = (rect.x as i32).clamp(0, LCD_WIDTH) as usize;
+    let x1 = (rect.x as i32 + rect.w as i32).clamp(0, LCD_WIDTH) as usize;
+    let y0 = (rect.y as i32).clamp(0, LCD_HEIGHT) as usize;
+    let y1 = (rect.y as i32 + rect.h as i32).clamp(0, LCD_HEIGHT) as usize;
+    for y in y0..y1 {
+        let row = y * ROW_BYTES;
+        for x in x0..x1 {
+            let i = row + x * 2;
+            frame[i] = hi;
+            frame[i + 1] = lo;
+        }
+    }
+}
+
+/// Light fills take black ink. Dark fills take white.
+fn ink_on(fill: u16) -> u16 {
+    if fill & 0x07E0 > 0x03E0 {
+        0x0000
+    } else {
+        0xFFFF
+    }
+}
+
+fn compose(frame: &mut [u8], items: &[DrawItem]) {
+    for item in items {
+        fill_rect(frame, item.rect, item.fill);
+        let ink = ink_on(item.fill);
+        blit_text(item.text.as_str(), &item.rect, |x, y| {
+            put_px(frame, x, y, ink);
+        });
+    }
+}
+
+fn flush(frame: &[u8], bounce: &mut [u8]) -> bool {
+    let caset = [0u8, 0, ((LCD_WIDTH - 1) >> 8) as u8, (LCD_WIDTH - 1) as u8];
+    if !lcd_cmd(0x2A, &caset) {
+        return false;
+    }
+    let mut y = 0i32;
+    while y < LCD_HEIGHT {
+        let rows = BAND_ROWS.min(LCD_HEIGHT - y);
+        let y0 = y as u16;
+        let y1 = (y + rows - 1) as u16;
+        let raset = [(y0 >> 8) as u8, y0 as u8, (y1 >> 8) as u8, y1 as u8];
+        if !lcd_cmd(0x2B, &raset) {
+            return false;
+        }
+        let start = y as usize * ROW_BYTES;
+        let len = rows as usize * ROW_BYTES;
+        bounce[..len].copy_from_slice(&frame[start..start + len]);
+        unsafe {
+            if sys::esp_lcd_panel_io_tx_color(io_handle(), 0x2C, bounce.as_ptr().cast(), len)
+                != sys::ESP_OK
+            {
+                return false;
+            }
+        }
+        // tx_color returns before DMA finishes. A following command waits.
+        if !lcd_cmd(0x00, &[]) {
+            return false;
+        }
+        y += rows;
+    }
+    true
 }
 
 fn paint(ui: &mut Ui, status: &Status) -> bool {
@@ -180,47 +295,15 @@ fn paint(ui: &mut Ui, status: &Status) -> bool {
     if nitems == 0 {
         return false;
     }
-    let mut line = [0u8; (LCD_WIDTH as usize) * 2];
-    for y in 0..LCD_HEIGHT {
-        for x in 0..LCD_WIDTH {
-            let mut color = items[0].fill;
-            let mut ink = text_covers(items[0].text.as_str(), &items[0].rect, x, y);
-            for item in items.iter().take(nitems).skip(1) {
-                if inside(&item.rect, x, y) {
-                    color = item.fill;
-                    ink = text_covers(item.text.as_str(), &item.rect, x, y);
-                }
-            }
-            if ink {
-                // Light fills, the accent block, take black ink. Dark fills take white.
-                color = if color & 0x07E0 > 0x03E0 {
-                    0x0000
-                } else {
-                    0xFFFF
-                };
-            }
-            let xi = x as usize;
-            line[xi * 2] = (color >> 8) as u8;
-            line[xi * 2 + 1] = color as u8;
-        }
-        let caset = [0u8, 0, ((LCD_WIDTH - 1) >> 8) as u8, (LCD_WIDTH - 1) as u8];
-        let raset = [0u8, y as u8, 0, y as u8];
-        if !lcd_cmd(0x2A, &caset) || !lcd_cmd(0x2B, &raset) {
-            return false;
-        }
-        unsafe {
-            if sys::esp_lcd_panel_io_tx_color(io_handle(), 0x2C, line.as_ptr().cast(), line.len())
-                != sys::ESP_OK
-            {
-                return false;
-            }
-        }
-        // tx_color returns before DMA finishes. A following command waits.
-        if !lcd_cmd(0x00, &[]) {
-            return false;
-        }
+    let Some(buf) = panel_buf() else {
+        return false;
+    };
+    unsafe {
+        let frame = std::slice::from_raw_parts_mut(buf.frame as *mut u8, FRAME_BYTES);
+        let bounce = std::slice::from_raw_parts_mut(buf.bounce as *mut u8, BAND_BYTES);
+        compose(frame, &items[..nitems]);
+        flush(frame, bounce)
     }
-    true
 }
 
 /// Paints the current screen on the ILI9342C. The host test does not link this.

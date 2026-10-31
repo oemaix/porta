@@ -49,7 +49,19 @@ impl App {
         }
     }
 
-    pub fn panel_step(&mut self, hw: &Hw) {
+    /// Returns whether this poll changed the painted picture.
+    /// An unbound button reports an action and leaves the picture alone.
+    pub fn panel_step(&mut self, hw: &Hw) -> bool {
+        self.player.sync(&mut self.status);
+        if self.queue.count == 0 {
+            self.ui.shown_playing = self.status.playing;
+        }
+        let before = (
+            self.ui.screen(),
+            self.ui.focus,
+            self.ui.shown_playing,
+            self.ui.shown_volume(),
+        );
         let mut blocks = [BlockView {
             rect: Rect {
                 x: 0,
@@ -80,13 +92,25 @@ impl App {
         for action in actions.iter().take(nactions) {
             self.ui.apply(&self.status, &mut self.queue, *action);
         }
+        let changed = before
+            != (
+                self.ui.screen(),
+                self.ui.focus,
+                self.ui.shown_playing,
+                self.ui.shown_volume(),
+            )
+            || self.ui.status_changed(&self.status);
+        if changed {
+            self.ui.mark_painted(&self.status);
+        }
+        changed
     }
 
     pub fn audio_step(&mut self, stereo: &mut [i16], frames: usize) {
         // Software PCM only. This step does not start the codec.
-        Player::drain(&mut self.queue, &mut self.status);
+        self.player.drain(&mut self.queue, &mut self.status);
         let rate = self.sink.rate_hz;
-        self.player.render(&self.status, stereo, frames, rate);
+        self.player.render(&mut self.status, stereo, frames, rate);
         self.sink.write(Some(stereo), frames, rate);
     }
 }

@@ -994,6 +994,7 @@ version = "0.1.0"
 dependencies = [
  "embuild",
  "esp-idf-svc",
+ "heapless",
  "log",
 ]
 

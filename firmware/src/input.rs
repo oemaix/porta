@@ -12,17 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Module HMI, I2C 0x41. Addresses follow the M5Module-HMI library map:
-//! increment is a little-endian int32, buttons are one byte each.
-//! Button 1 is the encoder press. Non-zero is treated as down.
+//! Module HMI, I2C 0x41. Addresses follow the M5Module-HMI register map.
+//! The encoder count and the increment are little-endian int32.
+//! Buttons are one byte each. Non-zero is down.
+//! Register 0x20 is the encoder switch S. 0x21 is BtnA. 0x22 is BtnB.
+//! BtnA is Back. BtnB has no command (D-0009, D-0026).
 
 use crate::seam::{Action, ActionKind, Rect};
 
 pub const HMI_ADDR: u8 = 0x41;
+pub const HMI_REG_ENCODER: u8 = 0x00;
 pub const HMI_REG_INCREMENT: u8 = 0x10;
 pub const HMI_REG_BUTTON1: u8 = 0x20;
 pub const HMI_REG_BUTTON2: u8 = 0x21;
 pub const HMI_REG_BUTTON3: u8 = 0x22;
+/// Encoder switch S.
+pub const HMI_IDX_PRESS: usize = 0;
+/// Side key BtnA. Back.
+pub const HMI_IDX_A: usize = 1;
+/// Side key BtnB. Unbound.
+pub const HMI_IDX_B: usize = 2;
 pub const HMI_REG_LED1: u8 = 0x30;
 pub const HMI_REG_LED2: u8 = 0x31;
 
@@ -81,18 +90,18 @@ impl Input {
     /// Button and touch actions come before wheel steps, so a press confirms
     /// the block that already has focus. Wheel steps that do not fit stay in
     /// `pending_steps`. A rising edge is kept when the action list is full.
-    /// `blocks` are the current screen, in focus order.
+    /// `blocks` are the current screen, in focus order. A tap on a focused
+    /// block is Activate: index 0 is the middle third, 1 the left, 2 the right.
     pub fn poll(&mut self, hw: &Hw, blocks: &[Rect], focus: u8, out: &mut [Action]) -> usize {
         let mut n = 0usize;
         for i in 0..3 {
             let down = hw.button_down[i];
             if down && !self.button_down[i] {
-                let kind = if i == 1 {
-                    ActionKind::Back
-                } else if i == 2 {
-                    ActionKind::Button3
-                } else {
-                    ActionKind::Activate
+                let kind = match i {
+                    HMI_IDX_PRESS => ActionKind::Activate,
+                    HMI_IDX_A => ActionKind::Back,
+                    HMI_IDX_B => ActionKind::Button3,
+                    _ => continue,
                 };
                 if !push_action(out, &mut n, kind, 0) {
                     continue;
@@ -114,7 +123,7 @@ impl Input {
                 }
                 claimed = true;
                 if i == focus as usize {
-                    if push_action(out, &mut n, ActionKind::Activate, 0) {
+                    if push_action(out, &mut n, ActionKind::Activate, zone(block, hw.x)) {
                         self.panel_down = true;
                     }
                 } else if push_action(out, &mut n, ActionKind::Focus, i as u8) {
@@ -195,6 +204,49 @@ pub fn hmi_led_off(out: &mut [I2cWrite]) -> usize {
     2
 }
 
+/// One click on the Module HMI is four counts. `observe` adds the change
+/// since the previous read and returns one step per four counts, as soon
+/// as they have arrived (P-0057).
+#[derive(Clone, Copy, Debug)]
+pub struct WheelDetent {
+    last: i32,
+    pending: i32,
+    ready: bool,
+}
+
+const COUNTS_PER_CLICK: i32 = 4;
+
+impl WheelDetent {
+    pub fn new() -> Self {
+        Self {
+            last: 0,
+            pending: 0,
+            ready: false,
+        }
+    }
+
+    pub fn observe(&mut self, now: i32) -> i32 {
+        if !self.ready {
+            self.last = now;
+            self.ready = true;
+            return 0;
+        }
+        let delta = now.wrapping_sub(self.last);
+        self.last = now;
+        self.pending = self.pending.saturating_add(delta);
+        let mut steps = 0;
+        while self.pending >= COUNTS_PER_CLICK {
+            self.pending -= COUNTS_PER_CLICK;
+            steps += 1;
+        }
+        while self.pending <= -COUNTS_PER_CLICK {
+            self.pending += COUNTS_PER_CLICK;
+            steps -= 1;
+        }
+        steps
+    }
+}
+
 pub fn hmi_increment(bytes: &[u8; 4]) -> i32 {
     let value = bytes[0] as u32
         | ((bytes[1] as u32) << 8)
@@ -203,7 +255,7 @@ pub fn hmi_increment(bytes: &[u8; 4]) -> i32 {
     value as i32
 }
 
-/// `bytes` are registers 0x20, 0x21, 0x22. Index 0 is the encoder press.
+/// `bytes` are registers 0x20, 0x21, 0x22. Index 0 is S, 1 is BtnA, 2 is BtnB.
 pub fn hmi_buttons(bytes: &[u8; 3], down: &mut [bool; 3]) {
     for i in 0..3 {
         down[i] = bytes[i] != 0;
@@ -232,4 +284,37 @@ fn push_action(out: &mut [Action], n: &mut usize, kind: ActionKind, index: u8) -
 
 fn inside(rect: &Rect, x: i16, y: i16) -> bool {
     x >= rect.x && y >= rect.y && x < rect.x + rect.w && y < rect.y + rect.h
+}
+
+/// 0 is the middle third, 1 the left, 2 the right.
+fn zone(rect: &Rect, x: i16) -> u8 {
+    let third = rect.w / 3;
+    if third <= 0 {
+        return 0;
+    }
+    let local = x - rect.x;
+    if local < third {
+        1
+    } else if local >= rect.w - third {
+        2
+    } else {
+        0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WheelDetent;
+
+    #[test]
+    fn one_click_is_one_step() {
+        let mut wheel = WheelDetent::new();
+        assert_eq!(wheel.observe(0), 0);
+        assert_eq!(wheel.observe(1), 0);
+        assert_eq!(wheel.observe(2), 0);
+        assert_eq!(wheel.observe(4), 1);
+        assert_eq!(wheel.observe(7), 0);
+        assert_eq!(wheel.observe(8), 1);
+        assert_eq!(wheel.observe(0), -2);
+    }
 }

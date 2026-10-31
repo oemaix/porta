@@ -15,7 +15,6 @@
 use porta::app::App;
 use porta::input::{self, Hw, Input};
 use porta::net;
-use porta::player::Player;
 use porta::seam::{Command, CommandKind, QUEUE_CAP, VOLUME_MAX};
 use porta::sink::{self, RATE_44K, RATE_48K};
 use porta::ui::{self, Screen, DRAW_CAP};
@@ -31,6 +30,36 @@ fn wheel(app: &mut App, steps: i32) {
     let mut hw = Hw::idle();
     hw.increment = steps;
     app.panel_step(&hw);
+}
+
+fn now_blocks(app: &App) -> [ui::BlockView; 5] {
+    let mut blocks = [ui::BlockView {
+        rect: porta::seam::Rect {
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+        },
+        role: ui::Role::Info,
+        label: porta::seam::FixedText::new(),
+    }; 5];
+    app.ui.blocks(&app.status, &mut blocks);
+    blocks
+}
+
+fn side(app: &mut App, index: usize, right: bool) {
+    let blocks = now_blocks(app);
+    let rect = blocks[index].rect;
+    let mut hw = Hw::idle();
+    hw.touch_valid = true;
+    hw.x = if right {
+        rect.x + rect.w - 8
+    } else {
+        rect.x + 8
+    };
+    hw.y = rect.y + rect.h / 2;
+    app.panel_step(&hw);
+    app.panel_step(&Hw::idle());
 }
 
 fn peak(stereo: &[i16], frames: usize) -> i16 {
@@ -82,48 +111,58 @@ fn phase1() {
     }; DRAW_CAP];
     let n = app.ui.draw(&app.status, &mut draw);
     let item = draw[..n].iter().find(|item| item.focused);
+    expect(n == 5, "title and four blocks");
     expect(
-        item.is_some_and(|item| item.text.as_str() == "Play"),
+        item.is_some_and(|item| {
+            let text = item.text.as_str();
+            text.starts_with('<') && text.ends_with('>') && text.contains("Play")
+        }),
         "focus play",
+    );
+    expect(
+        draw[..n]
+            .iter()
+            .any(|item| item.text.as_str().contains("vol 50")),
+        "volume block",
+    );
+    expect(
+        !draw[..n]
+            .iter()
+            .any(|item| item.text.as_str().starts_with("Volume")),
+        "no volume line",
     );
 
     press(&mut app, 0);
     let mut pcm = [0i16; 128];
     app.audio_step(&mut pcm, 64);
-    expect(app.status.playing, "playing");
-    expect(peak(&pcm, 64) > 0, "tone");
-    expect(app.status.title.as_str() == "Tone stand-in", "title stays");
-
-    press(&mut app, 0);
-    app.audio_step(&mut pcm, 64);
-    expect(!app.status.playing, "paused");
+    expect(!app.status.playing, "play waits for a session");
     expect(peak(&pcm, 64) == 0, "silence");
+    expect(app.status.title.as_str() == "Tone stand-in", "title stays");
 
     app.queue.push(Command {
         kind: CommandKind::Next,
         volume_step: 0,
     });
-    Player::drain(&mut app.queue, &mut app.status);
+    app.player.drain(&mut app.queue, &mut app.status);
     expect(
         app.status.title.as_str() == "Tone stand-in",
         "next is not a catalog",
     );
 
     wheel(&mut app, 1);
-    press(&mut app, 0);
-    press(&mut app, 0);
+    side(&mut app, 1, true);
+    side(&mut app, 1, true);
     app.audio_step(&mut pcm, 8);
     expect(app.status.volume == 70, "two louder steps");
 
-    wheel(&mut app, 1);
     for _ in 0..7 {
-        press(&mut app, 0);
+        side(&mut app, 1, false);
     }
     app.audio_step(&mut pcm, 8);
     expect(app.status.volume == 0, "volume floor");
 
     let mut app = App::init();
-    wheel(&mut app, 3);
+    wheel(&mut app, 2);
     press(&mut app, 0);
     expect(app.ui.screen() == Screen::Connect, "connect");
     let mut blocks = [ui::BlockView {
@@ -145,17 +184,17 @@ fn phase1() {
     app.ui.blocks(&app.status, &mut blocks);
     expect(blocks[0].label.as_str() == "Wi-Fi up", "wifi up");
     expect(
-        blocks[1].label.as_str() == "Tone stand-in",
+        blocks[1].label.as_str() == "Pick porta in Spotify",
         "login placeholder",
     );
     press(&mut app, 2);
-    expect(app.ui.screen() == Screen::Connect, "button 3 ignored");
+    expect(app.ui.screen() == Screen::Connect, "btn B ignored");
     press(&mut app, 1);
-    expect(app.ui.screen() == Screen::Now, "back");
+    expect(app.ui.screen() == Screen::Now, "btn A back");
     press(&mut app, 1);
-    expect(app.ui.screen() == Screen::Now, "back on root");
+    expect(app.ui.screen() == Screen::Now, "btn A on root");
 
-    wheel(&mut app, 4);
+    wheel(&mut app, 3);
     press(&mut app, 0);
     expect(app.ui.screen() == Screen::Settings, "settings");
     let n = app.ui.blocks(&app.status, &mut blocks);
@@ -170,14 +209,14 @@ fn phase1() {
     let _ = n;
     let mut hw = Hw::idle();
     hw.touch_valid = true;
-    hw.x = blocks[3].rect.x + 4;
-    hw.y = blocks[3].rect.y + 4;
+    hw.x = blocks[2].rect.x + 4;
+    hw.y = blocks[2].rect.y + 4;
     app.panel_step(&hw);
-    expect(app.ui.focus == 3, "tap moves focus");
+    expect(app.ui.focus == 2, "tap moves focus");
     app.panel_step(&Hw::idle());
     hw.touch_valid = true;
-    hw.x = blocks[3].rect.x + 4;
-    hw.y = blocks[3].rect.y + 4;
+    hw.x = blocks[2].rect.x + 4;
+    hw.y = blocks[2].rect.y + 4;
     app.panel_step(&hw);
     expect(app.ui.screen() == Screen::Connect, "tap activates");
 
@@ -221,18 +260,23 @@ fn phase1() {
     hw.button_down[0] = true;
     app.panel_step(&hw);
     app.audio_step(&mut pcm, 8);
-    expect(app.status.playing, "press confirms the previous focus");
+    expect(!app.status.playing, "play waits for a session");
     expect(app.ui.focus == 1, "wheel step follows the press");
 
-    let raw = [0u8, 1, 0];
+    let raw_a = [0u8, 1, 0];
     let mut down = [false; 3];
-    input::hmi_buttons(&raw, &mut down);
+    input::hmi_buttons(&raw_a, &mut down);
     expect(!down[0] && down[1] && !down[2], "button registers");
     let mut app = App::init();
-    wheel(&mut app, 3);
+    wheel(&mut app, 2);
     press(&mut app, 0);
     let mut hw = Hw::idle();
-    input::hmi_buttons(&raw, &mut hw.button_down);
+    let raw_b = [0u8, 0, 1];
+    input::hmi_buttons(&raw_b, &mut hw.button_down);
+    app.panel_step(&hw);
+    expect(app.ui.screen() == Screen::Connect, "register 0x22 ignored");
+    app.panel_step(&Hw::idle());
+    input::hmi_buttons(&raw_a, &mut hw.button_down);
     app.panel_step(&hw);
     expect(app.ui.screen() == Screen::Now, "register 0x21 goes back");
 
@@ -240,21 +284,21 @@ fn phase1() {
     let mut hw = Hw::idle();
     hw.increment = 10;
     app.panel_step(&hw);
-    expect(app.ui.focus == 3, "eight steps this poll");
+    expect(app.ui.focus == 0, "eight steps this poll");
     app.panel_step(&Hw::idle());
-    expect(app.ui.focus == 0, "leftover steps wait");
+    expect(app.ui.focus == 2, "leftover steps wait");
 
     let mut app = App::init();
     app.status.volume = VOLUME_MAX;
     wheel(&mut app, 1);
-    press(&mut app, 0);
+    side(&mut app, 1, true);
     expect(app.queue.count == 0, "louder at the ceiling is not queued");
     expect(app.status.volume == VOLUME_MAX, "ceiling held");
 
     let mut app = App::init();
     app.status.volume = 0;
-    wheel(&mut app, 2);
-    press(&mut app, 0);
+    wheel(&mut app, 1);
+    side(&mut app, 1, false);
     expect(app.queue.count == 0, "quieter at the floor is not queued");
 
     let mut app = App::init();

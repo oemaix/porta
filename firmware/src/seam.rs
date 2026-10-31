@@ -21,8 +21,9 @@ pub const VOLUME_MAX: u8 = 100;
 pub const VOLUME_STEP: i8 = 10;
 
 /// Listener-facing actions are next, previous, activate, and back.
-/// Focus is how a tap names a block. Button 3 and the screen buttons are
-/// reported and dropped by ui.
+/// Focus is how a tap names a block. BtnB and the screen buttons are
+/// reported and dropped by ui. Activate index 0 is the middle of a block,
+/// 1 the left third, and 2 the right third.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionKind {
     Next = 1,

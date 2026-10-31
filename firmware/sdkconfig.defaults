@@ -5,3 +5,33 @@ CONFIG_IDF_TARGET="esp32"
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_BOOT_INIT=y
+# The 3584-byte default overflows in the first paint and reboot-loops (P-0051).
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
+# cspot is C++ and throws. The Core2 image stays Rust at the edges.
+CONFIG_COMPILER_CXX_EXCEPTIONS=y
+CONFIG_COMPILER_CXX_RTTI=y
+# Wi-Fi in IRAM plus cspot overflows iram0_0_seg.
+CONFIG_ESP_WIFI_IRAM_OPT=n
+CONFIG_ESP_WIFI_RX_IRAM_OPT=n
+# Driver chunks go to PSRAM. The panel bounce buffer, the static RX
+# buffers, and the Wi-Fi task stay internal (P-0062).
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=40960
+# The PSRAM option raises both of these to 16. Six stays inside the reserve,
+# and the BA window must be at most twice the static RX count.
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=6
+CONFIG_ESP_WIFI_RX_BA_WIN=6
+# TRY_ALLOCATE hides dynamic TX. A fresh sdkconfig then picks 16 static
+# buffers and 32 cache buffers, each about 1.6 KB of DMA (P-0062).
+CONFIG_ESP_WIFI_STATIC_TX_BUFFER=y
+CONFIG_ESP_WIFI_TX_BUFFER_TYPE=0
+CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_CACHE_TX_BUFFER_NUM=16
+# cspot stacks live in PSRAM. ESP32 FreeRTOS rejects that unless this is set (P-0064).
+CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM=y
+# WPA3 SAE enlarges the Wi-Fi task. The station is WPA/WPA2.
+# CONFIG_ESP_WIFI_ENABLE_WPA3_SAE is not set
+# CONFIG_ESP_WIFI_ENABLE_WPA3_OWE_STA is not set
+# Spotify's DH prime is 768 bits. The ESP32 accelerator rounds that up to
+# 1024 and the access point closes the socket (P-0068).
+# CONFIG_MBEDTLS_HARDWARE_MPI is not set

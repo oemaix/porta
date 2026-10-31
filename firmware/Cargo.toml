@@ -15,7 +15,14 @@ path = "src/main.rs"
 
 [target.'cfg(target_os = "espidf")'.dependencies]
 esp-idf-svc = "0.53"
+heapless = "0.9"
 log = "0.4"
 
 [build-dependencies]
 embuild = { version = "0.33", features = ["espidf"] }
+
+[package.metadata.esp-idf-sys]
+extra_components = [
+  { component_dirs = ["components"] },
+  { remote_component = { name = "espressif/mdns", version = "1.8.0" } },
+]
