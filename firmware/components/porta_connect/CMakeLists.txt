@@ -32,6 +32,10 @@ set(BELL_CODEC_VORBIS ON CACHE BOOL "" FORCE)
 string(REPLACE ":" ";" _porta_path "$ENV{PATH}")
 set(PORTA_NANOPB_PYTHON "")
 foreach(_dir ${_porta_path})
+    # The IDF virtualenv is first on PATH and is not the generator interpreter (P-0060).
+    if(_dir MATCHES "espressif/python_env")
+        continue()
+    endif()
     if(EXISTS "${_dir}/python3")
         execute_process(
             COMMAND "${_dir}/python3" -c "import google.protobuf"
@@ -48,11 +52,18 @@ endforeach()
 if(PORTA_NANOPB_PYTHON STREQUAL "")
     message(FATAL_ERROR "cspot nanopb needs a python3 that imports google.protobuf")
 endif()
-file(WRITE "${CSPOT_ROOT}/bell/external/nanopb/generator/protoc-gen-nanopb"
+file(READ "${CSPOT_ROOT}/bell/external/nanopb/generator/protoc-gen-nanopb" _porta_plugin)
+if(_porta_plugin MATCHES "exec /")
+    message(FATAL_ERROR "nanopb plugin must not embed an absolute interpreter path")
+endif()
+# The wrapper lives in the build tree. The submodule script stays the upstream
+# relative exec, so a machine path is not written into the external library.
+set(PORTA_NANOPB_PLUGIN "${CMAKE_CURRENT_BINARY_DIR}/porta-protoc-gen-nanopb")
+file(WRITE "${PORTA_NANOPB_PLUGIN}"
 "#!/bin/sh
-MYPATH=$(dirname \"$0\")
-exec ${PORTA_NANOPB_PYTHON} \"$MYPATH/nanopb_generator.py\" --protoc-plugin
+exec \"${PORTA_NANOPB_PYTHON}\" \"${CSPOT_ROOT}/bell/external/nanopb/generator/nanopb_generator.py\" --protoc-plugin
 ")
+execute_process(COMMAND chmod a+x "${PORTA_NANOPB_PLUGIN}")
 
 idf_component_register(
     SRCS porta_connect.cpp wchar_stubs.c

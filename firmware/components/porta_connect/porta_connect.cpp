@@ -43,6 +43,8 @@ static std::mutex title_mu;
 static char title[48];
 
 static std::atomic<int> logged_in{0};
+static std::atomic<int> pause_edge{-1};
+static std::atomic<int> flush_req{0};
 static std::atomic<int> want_play{-1};
 static std::atomic<int> want_skip{0};
 static std::atomic<int> want_volume{-1};
@@ -75,6 +77,13 @@ static void ring_write(const int16_t *src, size_t n) {
         ring_w = (ring_w + 1) % ring_cap;
         ring_n++;
     }
+}
+
+static void ring_clear() {
+    std::lock_guard<std::mutex> lock(ring_mu);
+    ring_r = 0;
+    ring_w = 0;
+    ring_n = 0;
 }
 
 static bool replace_json_string(std::string &json, const char *key, const char *value) {
@@ -251,22 +260,19 @@ class PortaConnect : public bell::Task {
             }
             ESP_LOGI(TAG, "got credentials");
             std::shared_ptr<cspot::Context> ctx;
-            for (int attempt = 0; attempt < 3 && !ctx; attempt++) {
-                try {
-                    auto created = cspot::Context::createFromBlob(blob);
-                    created->config.clientId = client_id;
-                    created->config.clientSecret = client_secret;
-                    created->session->connectWithRandomAp();
-                    auto token = created->session->authenticate(blob);
-                    if (token.empty()) {
-                        ESP_LOGE(TAG, "spotify auth failed");
-                        break;
-                    }
+            try {
+                auto created = cspot::Context::createFromBlob(blob);
+                created->config.clientId = client_id;
+                created->config.clientSecret = client_secret;
+                created->session->connectWithRandomAp();
+                auto token = created->session->authenticate(blob);
+                if (token.empty()) {
+                    ESP_LOGE(TAG, "spotify auth failed");
+                } else {
                     ctx = created;
-                } catch (const std::exception &ex) {
-                    ESP_LOGE(TAG, "spotify session failed: %s", ex.what());
-                    BELL_SLEEP_MS(2000);
                 }
+            } catch (const std::exception &ex) {
+                ESP_LOGE(TAG, "spotify session failed: %s", ex.what());
             }
             if (ctx) {
                 try {
@@ -281,12 +287,35 @@ class PortaConnect : public bell::Task {
                         });
                     created->setEventHandler(
                         [](std::unique_ptr<cspot::SpircHandler::Event> event) {
-                            if (event->eventType ==
-                                cspot::SpircHandler::EventType::TRACK_INFO) {
-                                if (auto *info = std::get_if<cspot::TrackInfo>(
-                                        &event->data)) {
+                            using cspot::SpircHandler;
+                            switch (event->eventType) {
+                            case SpircHandler::EventType::TRACK_INFO:
+                                if (auto *info =
+                                        std::get_if<cspot::TrackInfo>(&event->data)) {
                                     set_title(info->name);
                                 }
+                                break;
+                            case SpircHandler::EventType::PLAY_PAUSE:
+                                if (auto *paused = std::get_if<bool>(&event->data)) {
+                                    pause_edge.store(*paused ? 1 : 0);
+                                    ESP_LOGI(TAG, "playback %s",
+                                             *paused ? "paused" : "playing");
+                                    if (*paused) {
+                                        ring_clear();
+                                    }
+                                }
+                                break;
+                            case SpircHandler::EventType::DISC:
+                                pause_edge.store(1);
+                                ring_clear();
+                                ESP_LOGI(TAG, "playback paused");
+                                break;
+                            case SpircHandler::EventType::FLUSH:
+                                flush_req.store(1);
+                                ring_clear();
+                                break;
+                            default:
+                                break;
                             }
                         });
                     {
@@ -371,6 +400,10 @@ extern "C" size_t porta_connect_take_pcm(int16_t *dst, size_t frames) {
     ring_n -= samples;
     return samples / 2;
 }
+
+extern "C" int porta_connect_take_pause(void) { return pause_edge.exchange(-1); }
+
+extern "C" int porta_connect_take_flush(void) { return flush_req.exchange(0); }
 
 extern "C" size_t porta_connect_take_title(char *dst, size_t cap) {
     if (dst == nullptr || cap == 0) {

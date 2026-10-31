@@ -118,6 +118,7 @@ fn log_bus_levels() {
 pub struct OpenedBus {
     pub i2c: I2cDriver<'static>,
     pub modem: Modem<'static>,
+    pub audio: crate::board_audio::AudioPins,
 }
 
 /// Opens the internal I2C bus and keeps the Wi-Fi modem. The driver stays
@@ -141,6 +142,13 @@ pub fn open_i2c() -> Option<OpenedBus> {
         Ok(i2c) => Some(OpenedBus {
             i2c,
             modem: peripherals.modem,
+            audio: crate::board_audio::AudioPins {
+                i2s: peripherals.i2s0,
+                mclk: peripherals.pins.gpio0,
+                bclk: peripherals.pins.gpio19,
+                ws: peripherals.pins.gpio27,
+                dout: peripherals.pins.gpio2,
+            },
         }),
         Err(_) => {
             log::error!("i2c bus failed");

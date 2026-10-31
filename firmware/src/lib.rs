@@ -24,6 +24,8 @@ pub mod sink;
 pub mod ui;
 
 #[cfg(target_os = "espidf")]
+mod board_audio;
+#[cfg(target_os = "espidf")]
 mod board_input;
 #[cfg(target_os = "espidf")]
 mod board_panel;
@@ -40,9 +42,10 @@ pub fn firmware_main() {
     esp_idf_svc::sys::link_patches();
     EspLogger::initialize_default();
     let mut app = app::App::init();
-    // The same I2C driver feeds the AXP192, the HMI, and the touch controller.
-    // Wi-Fi starts after the panel is up. I2S stays off.
-    // An unmeasured AXP192 limit does not forbid Wi-Fi.
+    // The same I2C driver feeds the AXP192, the HMI, the touch controller,
+    // and the ES8388. Wi-Fi starts after the panel is up. The headphone
+    // path starts after the station is up. An unmeasured AXP192 limit
+    // does not forbid Wi-Fi or I2S.
     let mut opened = match board_panel::open_i2c() {
         Some(opened) => opened,
         None => return,
@@ -66,9 +69,10 @@ pub fn firmware_main() {
     if !ui_lcd::present(&mut app.ui, &app.status) {
         log::error!("panel draw failed");
     }
+    let mut jack = board_audio::open(&mut opened.i2c, opened.audio);
     let i2c = &mut opened.i2c;
     let mut bus = board_input::BusState::new();
-    let mut pcm = [0i16; 1024];
+    let mut pcm = [0i16; 512];
     loop {
         if board_wifi::logged_in() && !app.player.has_credentials() {
             let _ = app.player.store_credentials(&mut app.status, b"session");
@@ -76,11 +80,20 @@ pub fn firmware_main() {
         if let Some(title) = board_wifi::take_title() {
             let _ = app.player.note_track(&mut app.status, &title);
         }
-        let frames = board_wifi::take_pcm(&mut pcm);
-        if frames > 0 {
-            let _ = app.player.push_pcm(&app.status, &pcm[..frames * 2]);
+        if board_wifi::take_flush() {
+            app.player.discard_pcm();
+            if let Some(jack) = jack.as_mut() {
+                jack.flush();
+            }
         }
-        app.audio_step(&mut pcm, 256);
+        if let Some(paused) = board_wifi::take_remote_pause() {
+            app.player.apply_remote_pause(&mut app.status, paused);
+        }
+        if let Some(jack) = jack.as_mut() {
+            fill_jack(&mut app, jack, &mut pcm);
+        } else {
+            app.audio_step(&mut pcm, 256);
+        }
         while let Some(command) = app.player.take_session_command() {
             board_wifi::command(command.kind as i32, app.status.volume as i32);
         }
@@ -89,5 +102,34 @@ pub fn firmware_main() {
             log::error!("panel draw failed");
         }
         FreeRtos::delay_ms(20);
+    }
+}
+
+/// Keeps about 140 ms queued so a panel paint does not open a gap in the jack.
+#[cfg(target_os = "espidf")]
+fn fill_jack(app: &mut app::App, jack: &board_audio::Headphone, pcm: &mut [i16]) {
+    for _ in 0..80 {
+        let queued = jack.queued_frames();
+        if queued >= board_audio::MARK_FRAMES {
+            return;
+        }
+        let ask = (board_audio::MARK_FRAMES - queued).min(pcm.len() / 2);
+        let played = app.audio_step(pcm, ask);
+        if played.frames > 0 {
+            jack.push(&pcm[..played.frames * 2]);
+            continue;
+        }
+        if !played.keep {
+            jack.flush();
+            return;
+        }
+        let room = app.player.free_frames().min(pcm.len() / 2);
+        if room == 0 {
+            return;
+        }
+        let got = board_wifi::take_pcm(&mut pcm[..room * 2]);
+        if got == 0 || app.player.push_pcm(&app.status, &pcm[..got * 2]) == 0 {
+            return;
+        }
     }
 }

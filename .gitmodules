@@ -2,3 +2,7 @@
 	path = postern
 	url = https://github.com/oemaix/postern.git
 	branch = main
+[submodule "firmware/third_party/cspot"]
+	path = firmware/third_party/cspot
+	url = https://github.com/oemaix/cspot.git
+	branch = master

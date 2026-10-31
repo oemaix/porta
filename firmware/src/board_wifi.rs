@@ -277,6 +277,8 @@ unsafe extern "C" {
     fn porta_connect_command(kind: i32, volume: i32);
     fn porta_connect_take_pcm(dst: *mut i16, frames: usize) -> usize;
     fn porta_connect_take_title(dst: *mut core::ffi::c_char, cap: usize) -> usize;
+    fn porta_connect_take_pause() -> i32;
+    fn porta_connect_take_flush() -> i32;
 }
 
 pub fn logged_in() -> bool {
@@ -290,6 +292,19 @@ pub fn command(kind: i32, volume: i32) {
 pub fn take_pcm(dst: &mut [i16]) -> usize {
     let frames = dst.len() / 2;
     unsafe { porta_connect_take_pcm(dst.as_mut_ptr(), frames) }
+}
+
+/// `Some(true)` is a pause from the session. `None` means no new edge.
+pub fn take_remote_pause() -> Option<bool> {
+    match unsafe { porta_connect_take_pause() } {
+        0 => Some(false),
+        1 => Some(true),
+        _ => None,
+    }
+}
+
+pub fn take_flush() -> bool {
+    unsafe { porta_connect_take_flush() != 0 }
 }
 
 pub fn take_title() -> Option<std::string::String> {

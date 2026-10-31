@@ -10,7 +10,8 @@
 /firmware/sdkconfig
 /firmware/sdkconfig.old
 /firmware/managed_components/
-/firmware/third_party/
+/firmware/third_party/*
+!/firmware/third_party/cspot
 
 # Nix
 /result

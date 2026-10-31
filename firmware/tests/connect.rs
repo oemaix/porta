@@ -86,8 +86,47 @@ fn pcm_replaces_the_tone() {
     assert_eq!(&pcm[..2], &[0, 0]);
     press(&mut app, 0);
     app.audio_step(&mut pcm, 1);
+    assert!(app.status.playing);
+    assert_eq!(&pcm[..2], &[0, 0]);
+    assert_eq!(app.player.push_pcm(&app.status, &[400, -400]), 1);
+    app.audio_step(&mut pcm, 1);
     assert_eq!(pcm[0], 200);
     assert_eq!(pcm[1], -200);
+}
+
+#[test]
+fn remote_playback_reaches_the_buffer() {
+    let mut app = App::init();
+    assert!(app.player.store_credentials(&mut app.status, b"blob"));
+    net::set_associated(&mut app.status, true);
+    app.player.sync(&mut app.status);
+    assert_eq!(app.player.push_pcm(&app.status, &[1000, -2000]), 1);
+    let mut pcm = [7i16; 8];
+    let waiting = app.audio_step(&mut pcm, 4);
+    assert!(!app.status.playing);
+    assert_eq!(waiting.frames, 0);
+    assert!(!waiting.keep);
+    assert_eq!(&pcm[..2], &[0, 0]);
+
+    app.player.apply_remote_pause(&mut app.status, false);
+    let played = app.audio_step(&mut pcm, 4);
+    assert!(app.status.playing);
+    assert_eq!(played.frames, 1);
+    assert!(played.keep);
+    assert_eq!(pcm[0], 500);
+    assert_eq!(pcm[1], -1000);
+    assert_eq!(&pcm[2..8], &[0; 6]);
+
+    app.player.apply_remote_pause(&mut app.status, true);
+    let paused = app.audio_step(&mut pcm, 1);
+    assert!(!app.status.playing);
+    assert_eq!(paused.frames, 0);
+    assert!(!paused.keep);
+    assert_eq!(&pcm[..2], &[0, 0]);
+    app.player.apply_remote_pause(&mut app.status, false);
+    let empty = app.audio_step(&mut pcm, 1);
+    assert_eq!(empty.frames, 0);
+    assert!(empty.keep);
 }
 
 #[test]

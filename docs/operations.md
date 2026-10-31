@@ -36,7 +36,7 @@ The image target is `xtensa-esp32-espidf`. `firmware/.cargo/config.toml` pins ES
 cargo build --target xtensa-esp32-espidf
 ```
 
-`embuild` clones ESP-IDF v5.5.6 into `firmware/.embuild/espressif` on that build. The tree is not a Nix package and is not Postern's v6.1 install. A passing `cargo test` is not that image ([P-0048](pitfalls.md#p-0048-core2-image-target)). `espflash` and `cargo-espflash` are in the shell. This page does not name a port, a baud rate, or an offset.
+cspot is the submodule `firmware/third_party/cspot` of `https://github.com/oemaix/cspot.git`, branch `master` ([P-0058](pitfalls.md#p-0058-cspot-credentials)). A fresh clone runs `git submodule update --init` before this build. `embuild` clones ESP-IDF v5.5.6 into `firmware/.embuild/espressif` on that build. The tree is not a Nix package and is not Postern's v6.1 install. A passing `cargo test` is not that image ([P-0048](pitfalls.md#p-0048-core2-image-target)). `espflash` and `cargo-espflash` are in the shell. This page does not name a port, a baud rate, or an offset.
 
 ## Postern
 

@@ -14,7 +14,7 @@
 
 use crate::board::Board;
 use crate::input::{Hw, Input};
-use crate::player::{Player, TONE_RATE};
+use crate::player::{Played, Player, TONE_RATE};
 use crate::seam::{Action, ActionKind, FixedText, Queue, Rect, Status};
 use crate::sink::Sink;
 use crate::ui::{BlockView, Role, Ui};
@@ -106,11 +106,12 @@ impl App {
         changed
     }
 
-    pub fn audio_step(&mut self, stereo: &mut [i16], frames: usize) {
-        // Software PCM only. This step does not start the codec.
+    pub fn audio_step(&mut self, stereo: &mut [i16], frames: usize) -> Played {
+        // The headphone task clocks `Played::frames`. This step does not touch I2C.
         self.player.drain(&mut self.queue, &mut self.status);
         let rate = self.sink.rate_hz;
-        self.player.render(&mut self.status, stereo, frames, rate);
+        let played = self.player.render(&mut self.status, stereo, frames, rate);
         self.sink.write(Some(stereo), frames, rate);
+        played
     }
 }
