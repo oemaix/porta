@@ -374,6 +374,12 @@ Agents read this file before design or implementation work, and they add to it w
 - **Avoid:** Do not leave `CONFIG_MBEDTLS_HARDWARE_MPI` set. Do not use `CONFIG_MBEDTLS_LARGE_KEY_SOFTWARE_MPI` as the substitute. That fallback runs only above 4096 bits.
 - **Why:** Spotify's prime is 768 bits, 24 words. The ESP32 accelerator rounds the length up to the next 512-bit block, 1024 bits, and zero-fills the rest. The public key is not a valid element. The access point accepts the TCP connection and then closes it. `readBlock` throws `Error in read` before `Received APHello response`. The software bignum keeps the 768-bit length. The TRRS jack is the ES8388 on I2S0 ([P-0069](#p-0069-module-audio-jack)).
 
+### P-0071 Client hello version
+
+- **Status:** Open
+- **Avoid:** Do not send ClientHello `build_info.version` as `0x10800000000`.
+- **Why:** That constant is the old feature gate. The access point still completes login, loads the track name, and then answers the audio-key request with packet `0x0E`. Sending the desktop version `124200290` on 2026-11-01 still returned `audio key error 0 1` on this account. The jack stays silent because no key means no samples ([P-0069](#p-0069-module-audio-jack)).
+
 ### P-0070 Access point list
 
 - **Status:** Open

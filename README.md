@@ -2,7 +2,19 @@
 
 Porta is a portable audio appliance built on M5Stack Core2 v1.3. It plays a Spotify stream, bridges a 3.5 mm input to Bluetooth headphones, and, in a later phase, receives AirPlay and DLNA. Wi-Fi stays on the Core2. Bluetooth transmission stays on a separate M5Stamp Pico.
 
-**Status:** Phase 0. This tree holds the specification, the development skeleton, and the [Postern](https://github.com/oemaix/postern/blob/main/README.md) submodule. There is no Core2 application yet. The current phase and the open choices are in [docs/roadmap.md](docs/roadmap.md) and [docs/decisions.md](docs/decisions.md).
+**Status:** Phase 1 is stalled. The Core2 image announces porta on Spotify Connect. A phone can select it, the session authenticates, and the track name arrives. The access point then refuses the legacy audio key (`audio key error 0 1`, packet `0x0E`). No samples are decoded, so the TRRS jack stays silent. The Connect implementation is incomplete. It resumes when an upstream client can obtain that key. There is no Spotify Connect device here to reverse engineer the newer license handshake. The phase list and the open choices are in [docs/roadmap.md](docs/roadmap.md) and [docs/decisions.md](docs/decisions.md).
+
+## Spotify playback
+
+On 2026-11-01 the bench log showed a correct key request (`file 20 track 16`) and the refusal `0 1`. Login, metadata, and the phone's play and pause state still succeed. Those later packets are the Connect remote, not the audio file. cspot, including the [philippe44/cspot](https://github.com/philippe44/cspot) pin in `firmware/third_party/cspot`, sends this same legacy request. The reports of that refusal:
+
+- [librespot #1649](https://github.com/librespot-org/librespot/issues/1649), the pinned thread for `error audio key 0 1`.
+- [librespot #1664](https://github.com/librespot-org/librespot/issues/1664) (2025-12-23): every track is skipped, on Home Assistant and on Windows.
+- [librespot #1735](https://github.com/librespot-org/librespot/issues/1735) (2026-08): one long-standing Premium account still receives a key, a Premium account created in June 2026 does not, on the same program and the same tracks.
+- [Volumio, 2026-10-15](https://community.volumio.com/t/2026-spotify-plugin/77605/17): newer Premium accounts in one family plan fail, older accounts in that plan play. The log shows `LicenseVersion`, then `aes key with code 1`.
+- [go-librespot #317](https://github.com/devgianlu/go-librespot/issues/317): the same code `1`. The thread treats the newer license handshake as the remaining path, and records that these projects do not implement it.
+
+The rollout described there is per account. A Premium subscription several years old can already be on the refusing side. Account age does not change the reply. This tree has one such account and no second account to compare.
 
 ## Documentation
 
